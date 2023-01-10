@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33122.133
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck", "CodeDeck\CodeDeck.csproj", "{2EE46B70-1CD7-4F03-AA7A-F901385DD558}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F99330EC-4621-4DE6-AD56-AA26D397DE01}"
+	ProjectSection(SolutionItems) = preProject
+		ToDo.txt = ToDo.txt
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.PluginSystem", "CodeDeck.PluginSystem\CodeDeck.PluginSystem.csproj", "{E3171EA4-3905-4A9A-B7DB-282BE8AFAD32}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{D0333636-23F1-4088-9BA9-AF8FEB903AB1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.PluginAbstractions", "CodeDeck.PluginAbstractions\CodeDeck.PluginAbstractions.csproj", "{07B81259-2E6F-4038-A9E6-36E4FD0E1B75}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeDeck.Plugins", "CodeDeck.Plugins\CodeDeck.Plugins.csproj", "{768C2681-9F72-4657-AB57-8B1F74202167}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2EE46B70-1CD7-4F03-AA7A-F901385DD558}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EE46B70-1CD7-4F03-AA7A-F901385DD558}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EE46B70-1CD7-4F03-AA7A-F901385DD558}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EE46B70-1CD7-4F03-AA7A-F901385DD558}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3171EA4-3905-4A9A-B7DB-282BE8AFAD32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3171EA4-3905-4A9A-B7DB-282BE8AFAD32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3171EA4-3905-4A9A-B7DB-282BE8AFAD32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3171EA4-3905-4A9A-B7DB-282BE8AFAD32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07B81259-2E6F-4038-A9E6-36E4FD0E1B75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07B81259-2E6F-4038-A9E6-36E4FD0E1B75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07B81259-2E6F-4038-A9E6-36E4FD0E1B75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07B81259-2E6F-4038-A9E6-36E4FD0E1B75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{768C2681-9F72-4657-AB57-8B1F74202167}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{768C2681-9F72-4657-AB57-8B1F74202167}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{768C2681-9F72-4657-AB57-8B1F74202167}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{768C2681-9F72-4657-AB57-8B1F74202167}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {14FF87D6-821A-4D70-97A7-69F16E6531AE}
+	EndGlobalSection
+EndGlobal
