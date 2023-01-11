@@ -1,20 +1,35 @@
 ﻿using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace CodeDeck
 {
     public class ConfigurationProvider
     {
+        public event EventHandler? ConfigurationChanged;
+
         public const string CONFIGURATION_FILE_NAME = "deck.json";
         private readonly ILogger<ConfigurationProvider> _logger;
+
+        private readonly FileSystemWatcher _fileSystemWatcher;
 
         public ConfigurationProvider(ILogger<ConfigurationProvider> logger)
         {
             _logger = logger;
+
+            _fileSystemWatcher = new FileSystemWatcher(@".")
+            {
+                Filter = CONFIGURATION_FILE_NAME,
+                EnableRaisingEvents = true,
+                NotifyFilter = NotifyFilters.LastWrite
+            };
+
+            _fileSystemWatcher.Changed += (sender, e) => {
+                ConfigurationChanged?.Invoke(this, e);
+            };
         }
 
         public bool DoesConfigurationFileExists()

@@ -32,6 +32,8 @@ namespace CodeDeck
         public Page? _previousPage = null;
         public Page? _currentPage;
 
+        private bool _applyingConfiguration = false;
+
 
         public StreamDeckManager(
             ILogger<StreamDeckManager> logger,
@@ -44,6 +46,20 @@ namespace CodeDeck
             _configurationProvider = configurationProvider;
             _pluginLoader = pluginLoader;
             _configuration = configurationProvider.LoadConfiguration();
+
+            configurationProvider.ConfigurationChanged += async (sender, e) => {
+                if (_applyingConfiguration) return;
+                _applyingConfiguration = true;
+                
+                await Task.Delay(500); // Wait for file to finish writing
+                _configuration = configurationProvider.LoadConfiguration();
+                
+                KeyWrappers.Clear();
+                await ApplyConfigurationAsync();
+                if (_currentProfile != null && _currentPage != null) GotoPage(_currentProfile, _currentPage);
+                
+                _applyingConfiguration = false;
+            };
 
             _fontCollection.AddSystemFonts();
 
