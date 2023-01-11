@@ -56,11 +56,10 @@ namespace CodeDeck
                     Tile.Settings = Key.Settings;
                     Tile.ImagePadding = Key.ImagePadding;
 
-                    if (Key.TextColor != null) Tile.TextColor = Color.ParseHex(Key.TextColor);
-                    if (Key.BackgroundColor != null) Tile.BackgroundColor = Color.ParseHex(Key.BackgroundColor);
-
                     try
                     {
+                        if (Key.TextColor != null) Tile.TextColor = Color.ParseHex(Key.TextColor);
+                        if (Key.BackgroundColor != null) Tile.BackgroundColor = Color.ParseHex(Key.BackgroundColor);
                         await Tile.Init();
                     }
                     catch (Exception e)
