@@ -26,11 +26,11 @@ namespace CodeDeck
 
         public List<KeyWrapper> KeyWrappers { get; set; } = new();
 
-        public Profile? _previousProfile = null;
-        public Profile? _currentProfile;
+        public string? _previousProfileName = null;
+        public string? _currentProfileName;
 
-        public Page? _previousPage = null;
-        public Page? _currentPage;
+        public string? _previousPageName = null;
+        public string? _currentPageName;
 
         private bool _applyingConfiguration = false;
 
@@ -56,7 +56,7 @@ namespace CodeDeck
                 
                 KeyWrappers.Clear();
                 await ApplyConfigurationAsync();
-                if (_currentProfile != null && _currentPage != null) GotoPage(_currentProfile, _currentPage);
+                RefreshPage();
                 
                 _applyingConfiguration = false;
             };
@@ -64,30 +64,33 @@ namespace CodeDeck
             _fontCollection.AddSystemFonts();
 
             _streamDeck = StreamDeckSharp.StreamDeck.OpenDevice();
-            _streamDeck.SetBrightness((byte)_configuration.Brightness);
             _streamDeck.ClearKeys();
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
         }
 
         public async Task ApplyConfigurationAsync()
         {
-            _currentProfile = _configuration.Profiles.FirstOrDefault();
-            if (_currentProfile == null)
+            _streamDeck.SetBrightness((byte)_configuration.Brightness);
+
+            var profile = _configuration.Profiles.FirstOrDefault();
+            if (profile == null)
             {
                 _logger.LogError("No profiles!");
                 return;
             }
+            _currentProfileName ??= profile?.Name;
 
-            _currentPage = _currentProfile.Pages.FirstOrDefault();
-            if (_currentPage == null)
+            var page = profile?.Pages?.FirstOrDefault();
+            if (page == null)
             {
                 _logger.LogError("No pages!");
                 return;
             }
+            _currentPageName ??= page?.Name;
 
             await CreateKeyWrappers();
 
-            GotoPage(_currentProfile, _currentPage);
+            RefreshPage();
         }
 
         public async Task CreateKeyWrappers()
@@ -123,14 +126,6 @@ namespace CodeDeck
             }
         }
 
-        public void GotoPage(Profile profile, Page page)
-        {
-            if (profile.Name != null && page.Name != null)
-            {
-                GotoPage(profile.Name, page.Name);
-            }
-        }
-
         public void GotoPage(string profileName, string pageName)
         {
             var profile = _configuration.Profiles.FirstOrDefault(x => x.Name == profileName);
@@ -138,31 +133,36 @@ namespace CodeDeck
 
             if (profile != null && page != null)
             {
-                _previousProfile = _currentProfile;
-                _currentProfile = profile;
-                _previousPage = _currentPage;
-                _currentPage = page;
+                _previousProfileName = _currentProfileName;
+                _currentProfileName = profile.Name;
+                _previousPageName = _currentPageName;
+                _currentPageName = page.Name;
 
-                _streamDeck.ClearKeys();
+                RefreshPage();
+            }
+        }
 
-                foreach (var keyWrapper in KeyWrappers.Where(x => x.Page == _currentPage))
-                {
-                    UpdateKeyBitmap(keyWrapper);
-                }
+        public void RefreshPage()
+        {
+            _streamDeck.ClearKeys();
+
+            foreach (var keyWrapper in KeyWrappers.Where(x => x.Page.Name == _currentPageName))
+            {
+                UpdateKeyBitmap(keyWrapper);
             }
         }
 
         public void GotoPreviousPage()
         {
-            if (_previousProfile?.Name == null || _previousPage?.Name == null) return;
-            GotoPage(_previousProfile.Name, _previousPage.Name);
+            if (_previousProfileName == null || _previousPageName == null) return;
+            GotoPage(_previousProfileName, _previousPageName);
         }
 
         private void StreamDeck_KeyStateChanged(object? sender, KeyEventArgs e)
         {
             var keyWrapper = KeyWrappers
-                .Where(x => x.Profile == _currentProfile)
-                .Where(x => x.Page == _currentPage)
+                .Where(x => x.Profile.Name == _currentProfileName)
+                .Where(x => x.Page.Name == _currentPageName)
                 .Where(x => x.Key.Index == e.Key)
                 .FirstOrDefault();
 
@@ -210,7 +210,7 @@ namespace CodeDeck
         /// <param name="keyWrapper"></param>
         private void KeyWrapper_Updated(object? sender, KeyWrapper keyWrapper)
         {
-            if (_currentProfile != keyWrapper.Profile || _currentPage != keyWrapper.Page) return;
+            if (_currentProfileName != keyWrapper.Profile.Name || _currentPageName != keyWrapper.Page.Name) return;
 
             UpdateKeyBitmap(keyWrapper);
         }
