@@ -1,4 +1,5 @@
-using CodeDeck.PluginAbstractions;
+﻿using CodeDeck.PluginAbstractions;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -45,9 +46,19 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
 
             private async Task GetAsync()
             {
-                ShowIndicator = true;
-                Text = string.Format(_format ?? "{0}", await _client.GetStringAsync(_url));
-                ShowIndicator = false;
+                try
+                {
+                    ShowIndicator = true;
+                    Text = string.Format(_format ?? "{0}", await _client.GetStringAsync(_url));
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    ShowIndicator = false;
+                }
             }
 
             private async Task BackgroundTask()
