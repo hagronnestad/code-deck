@@ -1,4 +1,4 @@
-﻿using CodeDeck.PluginAbstractions;
+using CodeDeck.PluginAbstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -54,7 +54,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
             {
                 while (true)
                 {
-                    await GetAsync();
+                    GetAsync().Wait();
                     await Task.Delay(_interval ?? 60000);
                 }
             }
