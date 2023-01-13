@@ -39,24 +39,36 @@ namespace CodeDeck
 
         public StreamDeckConfiguration LoadConfiguration()
         {
-            if (!DoesConfigurationFileExists())
+            try
             {
-                _logger.LogError($"Configuration file does not exist. Filename: {CONFIGURATION_FILE_NAME}");
-                var defaultConfiguration = CreateDefaultConfiguration();
-                var defaultJson = JsonSerializer.Serialize(defaultConfiguration,
-                    new JsonSerializerOptions()
-                    {
-                        WriteIndented = true
-                    });
-                File.WriteAllText(CONFIGURATION_FILE_NAME, defaultJson);
-                _logger.LogWarning($"Default configuration file created. Filename: {CONFIGURATION_FILE_NAME}");
+                if (!DoesConfigurationFileExists())
+                {
+                    _logger.LogError($"Configuration file does not exist. Filename: {CONFIGURATION_FILE_NAME}");
+                    var defaultConfiguration = CreateDefaultConfiguration();
+                    var defaultJson = JsonSerializer.Serialize(defaultConfiguration,
+                        new JsonSerializerOptions()
+                        {
+                            WriteIndented = true
+                        });
+                    File.WriteAllText(CONFIGURATION_FILE_NAME, defaultJson);
+                    _logger.LogWarning($"Default configuration file created. Filename: {CONFIGURATION_FILE_NAME}");
+                }
+
+                var json = File.ReadAllText(CONFIGURATION_FILE_NAME);
+
+                var configuration = JsonSerializer.Deserialize<StreamDeckConfiguration>(json, new JsonSerializerOptions()
+                {
+                    AllowTrailingCommas = true,
+                });
+
+                if (configuration is not null) return configuration;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Could not load configuration. Exception: {e.Message}");
             }
 
-            var json = File.ReadAllText(CONFIGURATION_FILE_NAME);
-
-            var configuration = JsonSerializer.Deserialize<StreamDeckConfiguration>(json);
-
-            return configuration ?? CreateDefaultConfiguration();
+            return CreateDefaultConfiguration();
         }
 
 

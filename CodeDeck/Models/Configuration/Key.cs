@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using CodeDeck.PluginAbstractions;
+using SixLabors.ImageSharp;
+using System;
+using System.Collections.Generic;
 
 namespace CodeDeck.Models.Configuration
 {
@@ -28,11 +31,56 @@ namespace CodeDeck.Models.Configuration
         public string? Image { get; set; }
         public int? ImagePadding { get; set; }
 
+        public bool? ShowFolderIndicator { get; set; }
+        public string? FolderIndicatorColor { get; set; }
+
+        public Color? TextColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (TextColor != null) return Color.ParseHex(TextColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
+
+        public Color? BackgroundColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (BackgroundColor != null) return Color.ParseHex(BackgroundColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
+
+        public Color? FolderIndicatorColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (FolderIndicatorColor != null) return Color.ParseHex(FolderIndicatorColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
+
         /// <summary>
         /// Plugin reference
         /// </summary>
         public string? Plugin { get; set; }
-        
+
         /// <summary>
         /// Tile reference
         /// </summary>

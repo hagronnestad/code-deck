@@ -228,12 +228,15 @@ namespace CodeDeck
                         keyWrapper.Tile?.Text ?? keyWrapper.Key.Text,
                         keyWrapper.Tile?.Font,
                         keyWrapper.Tile?.FontSize,
-                        keyWrapper.Tile?.TextColor,
-                        keyWrapper.Tile?.BackgroundColor,
+                        keyWrapper.Tile?.TextColor ?? keyWrapper.Key.TextColorAsColor,
+                        keyWrapper.Tile?.BackgroundColor ?? keyWrapper.Key.BackgroundColorAsColor,
                         keyWrapper.Image ?? keyWrapper.Tile?.Image,
                         keyWrapper.Tile?.ImagePadding,
                         keyWrapper.Tile?.ShowIndicator,
-                        keyWrapper.Tile?.IndicatorColor
+                        keyWrapper.Tile?.IndicatorColor,
+                        keyWrapper.Key.ShowFolderIndicator ??
+                            (keyWrapper.Key.KeyType == Key.KEY_TYPE_GOTO_PAGE ? true : false),
+                        keyWrapper.Key.FolderIndicatorColorAsColor ?? Color.Blue
                     )));
         }
 
@@ -246,7 +249,9 @@ namespace CodeDeck
             Image? image = null,
             int? imagePadding = null,
             bool? indicator = null,
-            Color? indicatorColor = null
+            Color? indicatorColor = null,
+            bool? folderIndicator = null,
+            Color? folderIndicatorColor = null
         )
         {
             var i = new Image<Rgba32>(_streamDeck.Keys.KeySize, _streamDeck.Keys.KeySize);
@@ -269,16 +274,31 @@ namespace CodeDeck
             {
                 var fontFamily = _fontCollection.Get(font ?? "Arial");
                 var f = fontFamily.CreateFont(fontSize ?? 16, FontStyle.Bold);
-                FontRectangle size = TextMeasurer.Measure(text, new TextOptions(f));
 
-                i.Mutate(x => x.DrawText(text, f, textColor ?? Color.White,
-                    new PointF(_streamDeck.Keys.KeySize / 2 - size.Width / 2,
-                    _streamDeck.Keys.KeySize / 2 - size.Height / 2)));
+                var size = TextMeasurer.Measure(text, new TextOptions(f));
+
+                var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
+                var textOptions = new TextOptions(f)
+                {
+                    Origin = center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextAlignment = TextAlignment.Center,
+                };
+                i.Mutate(x => x.DrawText(textOptions, text, textColor ?? Color.White));
             }
 
+            // Add indicator
             if (indicator.HasValue && indicator.Value)
             {
                 i.Mutate(x => x.Fill(indicatorColor ?? Color.Yellow, new EllipsePolygon(_streamDeck.Keys.KeySize - 5, 5, 3)));
+            }
+
+            // Add folder indicator
+            if (folderIndicator.HasValue && folderIndicator.Value)
+            {
+                var lineHeight = 5;
+                i.Mutate(x => x.Fill(folderIndicatorColor ?? Color.Azure, new Rectangle(0, _streamDeck.Keys.KeySize - lineHeight, _streamDeck.Keys.KeySize, lineHeight)));
             }
 
             return i;
