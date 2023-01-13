@@ -11,6 +11,7 @@ using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using CodeDeck.PluginSystem;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace CodeDeck
 {
@@ -45,27 +46,42 @@ namespace CodeDeck
 
             _configurationProvider = configurationProvider;
             _pluginLoader = pluginLoader;
-            _configuration = configurationProvider.LoadConfiguration();
-
-            configurationProvider.ConfigurationChanged += async (sender, e) => {
-                if (_applyingConfiguration) return;
-                _applyingConfiguration = true;
-                
-                await Task.Delay(500); // Wait for file to finish writing
-                _configuration = configurationProvider.LoadConfiguration();
-                
-                KeyWrappers.Clear();
-                await ApplyConfigurationAsync();
-                RefreshPage();
-                
-                _applyingConfiguration = false;
-            };
+            
+            _configuration = _configurationProvider.LoadConfiguration();
+            _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
 
             _fontCollection.AddSystemFonts();
 
             _streamDeck = StreamDeckSharp.StreamDeck.OpenDevice();
             _streamDeck.ClearKeys();
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
+        }
+
+        /// <summary>
+        /// This handler is called when the configuration file is updated.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void ConfigurationProvider_ConfigurationChanged(object? sender, System.EventArgs e)
+        {
+            if (_applyingConfiguration) return;
+            _applyingConfiguration = true;
+
+            // TODO: Wait for file access ready in a better way
+            await Task.Delay(500); // Wait for file to finish writing
+            _configuration = _configurationProvider.LoadConfiguration();
+
+            // DeInit all Tiles
+            await Task.WhenAll(KeyWrappers
+                .Where(x => x.Plugin != null)
+                .Select(x => x.Tile?.DeInit() ?? Task.CompletedTask));
+            KeyWrappers.Clear();
+
+            // Apply new configuration and refresh current page
+            await ApplyConfigurationAsync();
+            RefreshPage();
+
+            _applyingConfiguration = false;
         }
 
         public async Task ApplyConfigurationAsync()

@@ -117,6 +117,11 @@ namespace CodeDeck.PluginAbstractions
             await Task.CompletedTask;
         }
 
+        public virtual async Task DeInit()
+        {
+            await Task.CompletedTask;
+        }
+
         public virtual async Task OnTilePressDown()
         {
             await Task.CompletedTask;
