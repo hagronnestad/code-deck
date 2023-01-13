@@ -291,7 +291,7 @@ namespace CodeDeck
             // Add indicator
             if (indicator.HasValue && indicator.Value)
             {
-                i.Mutate(x => x.Fill(indicatorColor ?? Color.Yellow, new EllipsePolygon(_streamDeck.Keys.KeySize - 5, 5, 3)));
+                i.Mutate(x => x.Fill(indicatorColor ?? Color.Yellow, new EllipsePolygon(_streamDeck.Keys.KeySize - 7, 7, 3)));
             }
 
             // Add folder indicator
