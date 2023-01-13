@@ -101,11 +101,11 @@ namespace CodeDeck
                                         Index = 1,
                                         Plugin = "Runner",
                                         Tile = "ShellRunTile",
+                                        Text = "Calc",
                                         Settings = new()
                                         {
                                             { "program", "calc.exe" }
                                         },
-                                        Image = @"D:\OneDrive\Grafikk\StreamDeck Icons\calc.png",
                                     },
 
                                     new Key()
