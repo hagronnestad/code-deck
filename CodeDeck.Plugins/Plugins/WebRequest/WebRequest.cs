@@ -15,7 +15,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
             private string? _format;
             private int? _interval;
 
-            private bool deInit = false;
+            private bool _deInit = false;
 
             public override async Task Init()
             {
@@ -43,7 +43,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
 
             public override Task DeInit()
             {
-                deInit = true;
+                _deInit = true;
                 return Task.CompletedTask;
             }
 
@@ -71,7 +71,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
 
             private async Task BackgroundTask()
             {
-                while (!deInit)
+                while (!_deInit)
                 {
                     GetAsync().Wait();
                     await Task.Delay(_interval ?? 60000);
