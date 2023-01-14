@@ -31,6 +31,8 @@ namespace CodeDeck.Models.Configuration
         public string? Image { get; set; }
         public int? ImagePadding { get; set; }
 
+        public string? ActivityIndicatorColor { get; set; }
+
         public bool? ShowFolderIndicator { get; set; }
         public string? FolderIndicatorColor { get; set; }
 
@@ -55,6 +57,20 @@ namespace CodeDeck.Models.Configuration
                 try
                 {
                     if (BackgroundColor != null) return Color.ParseHex(BackgroundColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
+
+        public Color? ActivityIndicatorColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (ActivityIndicatorColor != null) return Color.ParseHex(ActivityIndicatorColor);
                 }
                 catch (Exception) { }
 

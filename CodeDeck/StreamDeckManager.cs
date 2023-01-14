@@ -249,7 +249,7 @@ namespace CodeDeck
                         keyWrapper.Image ?? keyWrapper.Tile?.Image,
                         keyWrapper.Tile?.ImagePadding,
                         keyWrapper.Tile?.ShowIndicator,
-                        keyWrapper.Tile?.IndicatorColor,
+                        keyWrapper.Tile?.IndicatorColor ?? keyWrapper.Key.ActivityIndicatorColorAsColor,
                         keyWrapper.Key.ShowFolderIndicator ??
                             (keyWrapper.Key.KeyType == Key.KEY_TYPE_GOTO_PAGE ? true : false),
                         keyWrapper.Key.FolderIndicatorColorAsColor ?? Color.Blue
