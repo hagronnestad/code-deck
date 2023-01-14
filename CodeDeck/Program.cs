@@ -8,9 +8,11 @@ using System.Threading.Tasks;
 
 namespace CodeDeck
 {
-    internal class Program
+    public class Program
     {
-        static async Task Main(string[] args)
+        private static readonly CancellationTokenSource cts = new CancellationTokenSource();
+
+        public static async Task Main(string[] args)
         {
             using IHost host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices((_, services) =>
@@ -35,7 +37,12 @@ namespace CodeDeck
                 })
                 .Build();
 
-            await host.RunAsync();
+            await host.RunAsync(cts.Token);
+        }
+
+        public static void StopHost()
+        {
+            cts.Cancel();
         }
     }
 
