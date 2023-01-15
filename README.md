@@ -1,11 +1,15 @@
-<div style="text-align: center;">
-
-![Alt text](Images/icon-128.png)
-
-</div>
-
+![Alt text](Images/icon-128.png) 
 
 # Code Deck
+
+- [Code Deck](#code-deck)
+  - [Description](#description)
+  - [Plugins](#plugins)
+  - [Supported Stream Decks](#supported-stream-decks)
+    - [Tested Stream Decks](#tested-stream-decks)
+
+
+## Description
 
 **Code Deck** is an open source alternative to the official Stream Deck application.
 
