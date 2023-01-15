@@ -59,10 +59,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                     ShowIndicator = true;
                     Text = string.Format(_format ?? "{0}", await _client.GetStringAsync(_url));
                 }
-                catch (Exception)
-                {
-                    throw;
-                }
+                catch (Exception) { }
                 finally
                 {
                     ShowIndicator = false;
