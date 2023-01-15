@@ -1,4 +1,6 @@
-using CodeDeck.Windows.Properties;
+﻿using CodeDeck.Windows.Properties;
+using System.Diagnostics;
+
 namespace CodeDeck.Windows
 {
     internal class Program
@@ -21,6 +23,24 @@ namespace CodeDeck.Windows
             _ni.ContextMenuStrip = _cms;
             _ni.Icon = Resources.icon_16_white_outline;
             _ni.MouseUp += _ni_MouseClick;
+
+            var mnuItemOpenConf = _cms.Items.Add("Open Configuration");
+            mnuItemOpenConf.Click += (s, e) =>
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo()
+                    {
+                        FileName = ConfigurationProvider.CONFIGURATION_FILE_NAME,
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Could not open configuration file. Error: \"{ex.Message}\"",
+                        "Open Configuration", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
 
             var mnuItemExit = _cms.Items.Add("Exit");
             mnuItemExit.Click += (s, e) =>
