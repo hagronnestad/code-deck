@@ -16,8 +16,6 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
             private string? _format;
             private int? _interval;
 
-            private bool _deInit = false;
-
             public override async Task Init(CancellationToken cancellationToken)
             {
                 if (Settings == null) return;
@@ -37,28 +35,22 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                     if (int.TryParse(interval, out var i)) _interval = i;
                 }
 
-                _ = Task.Run(BackgroundTask);
+                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
 
                 await Task.CompletedTask;
             }
 
-            public override Task DeInit()
-            {
-                _deInit = true;
-                return Task.CompletedTask;
-            }
-
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
-                await GetAsync();
+                await GetAsync(cancellationToken);
             }
 
-            private async Task GetAsync()
+            private async Task GetAsync(CancellationToken cancellationToken)
             {
                 try
                 {
                     ShowIndicator = true;
-                    Text = string.Format(_format ?? "{0}", await _client.GetStringAsync(_url));
+                    Text = string.Format(_format ?? "{0}", await _client.GetStringAsync(_url, cancellationToken));
                 }
                 catch (Exception) { }
                 finally
@@ -67,12 +59,18 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                 }
             }
 
-            private async Task BackgroundTask()
+            private async Task BackgroundTask(CancellationToken cancellationToken)
             {
-                while (!_deInit)
+                for (; ; )
                 {
-                    GetAsync().Wait();
-                    await Task.Delay(_interval ?? 60000);
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        Console.WriteLine($"{nameof(BackgroundTask)} in {nameof(PlainTextTile)} with {_url} was cancelled!");
+                        return;
+                    }
+
+                    GetAsync(cancellationToken).Wait(cancellationToken);
+                    await Task.Delay(_interval ?? 60000, cancellationToken);
                 }
             }
         }
