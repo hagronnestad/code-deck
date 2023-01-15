@@ -11,7 +11,6 @@ using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using CodeDeck.PluginSystem;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 
 namespace CodeDeck
 {
