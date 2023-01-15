@@ -1,4 +1,5 @@
-﻿namespace CodeDeck.Windows
+using CodeDeck.Windows.Properties;
+namespace CodeDeck.Windows
 {
     internal class Program
     {
@@ -18,12 +19,13 @@
 
             _ni.Visible = true;
             _ni.ContextMenuStrip = _cms;
-            _ni.Icon = SystemIcons.Application;
+            _ni.Icon = Resources.icon_16_white_outline;
             _ni.MouseUp += _ni_MouseClick;
 
             var mnuItemExit = _cms.Items.Add("Exit");
             mnuItemExit.Click += (s, e) =>
             {
+                _ni.Visible = false;
                 CodeDeck.Program.StopHost();
                 f.Close();
                 Application.Exit();
