@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Media;
 using System.Runtime.Versioning;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
@@ -25,7 +26,7 @@ namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
         {
             private CoreAudioDevice? _device = null;
 
-            public override async Task Init()
+            public override async Task Init(CancellationToken cancellationToken)
             {
                 var deviceName = Settings?["device"];
                 if (deviceName == null) return;
@@ -38,7 +39,7 @@ namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
                 await Task.CompletedTask;
             }
 
-            public override async Task OnTilePressDown()
+            public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
                 if (_device == null) return;
                 _audioController?.SetDefaultDevice(_device);

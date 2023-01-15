@@ -71,6 +71,7 @@ namespace CodeDeck
             _configuration = _configurationProvider.LoadConfiguration();
 
             // DeInit all Tiles
+            KeyWrappers.ForEach(x => x.CancellationTokenSource.Cancel());
             await Task.WhenAll(KeyWrappers
                 .Where(x => x.Plugin != null)
                 .Select(x => x.Tile?.DeInit() ?? Task.CompletedTask));

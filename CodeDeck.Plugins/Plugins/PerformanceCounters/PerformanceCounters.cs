@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Versioning;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.Counter;
@@ -15,7 +16,7 @@ public class PerformanceCounters : CodeDeckPlugin
 
         private PerformanceCounter _cpuUsageCounter = new("Processor Information", "% Processor Utility", "_Total");
 
-        public override async Task Init()
+        public override async Task Init(CancellationToken cancellationToken)
         {
             _ = Task.Run(UpdateTile);
             await Task.CompletedTask;
@@ -37,7 +38,7 @@ public class PerformanceCounters : CodeDeckPlugin
             return base.DeInit();
         }
 
-        public override async Task OnTilePressDown()
+        public override async Task OnTilePressDown(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
         }
@@ -49,7 +50,7 @@ public class PerformanceCounters : CodeDeckPlugin
 
         private PerformanceCounter _memUsageCounter = new("Memory", "% Committed Bytes In Use");
 
-        public override async Task Init()
+        public override async Task Init(CancellationToken cancellationToken)
         {
             _ = Task.Run(UpdateTile);
             await Task.CompletedTask;
@@ -71,7 +72,7 @@ public class PerformanceCounters : CodeDeckPlugin
             return base.DeInit();
         }
 
-        public override async Task OnTilePressDown()
+        public override async Task OnTilePressDown(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
         }
@@ -81,7 +82,7 @@ public class PerformanceCounters : CodeDeckPlugin
     {
         private bool _deInit = false;
 
-        public override async Task Init()
+        public override async Task Init(CancellationToken cancellationToken)
         {
             _ = Task.Run(UpdateTile);
             await Task.CompletedTask;
@@ -103,7 +104,7 @@ public class PerformanceCounters : CodeDeckPlugin
             return base.DeInit();
         }
 
-        public override async Task OnTilePressDown()
+        public override async Task OnTilePressDown(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
         }

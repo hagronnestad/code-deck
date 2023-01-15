@@ -1,6 +1,7 @@
 ﻿using CodeDeck.PluginAbstractions;
 using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.WebRequest
@@ -17,7 +18,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
 
             private bool _deInit = false;
 
-            public override async Task Init()
+            public override async Task Init(CancellationToken cancellationToken)
             {
                 if (Settings == null) return;
 
@@ -47,7 +48,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                 return Task.CompletedTask;
             }
 
-            public override async Task OnTilePressDown()
+            public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
                 await GetAsync();
             }

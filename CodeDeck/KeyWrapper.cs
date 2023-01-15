@@ -4,6 +4,7 @@ using CodeDeck.PluginSystem;
 using SixLabors.ImageSharp;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CodeDeck
@@ -16,6 +17,7 @@ namespace CodeDeck
 
         public LoadedPlugin? Plugin { get; set; }
         public Tile? Tile { get; set; }
+        public CancellationTokenSource CancellationTokenSource { get; } = new();
 
         public Image? Image { get; set; }
 
@@ -58,7 +60,7 @@ namespace CodeDeck
 
                     try
                     {
-                        await Tile.Init();
+                        await Tile.Init(CancellationTokenSource.Token);
                     }
                     catch (Exception e)
                     {
@@ -79,7 +81,7 @@ namespace CodeDeck
 
             try
             {
-                await Tile.OnTilePressDown();
+                await Tile.OnTilePressDown(CancellationTokenSource.Token);
             }
             catch (Exception e)
             {
@@ -93,7 +95,7 @@ namespace CodeDeck
 
             try
             {
-                await Tile.OnTilePressUp();
+                await Tile.OnTilePressUp(CancellationTokenSource.Token);
             }
             catch (Exception e)
             {

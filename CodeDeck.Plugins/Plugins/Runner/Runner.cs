@@ -3,6 +3,7 @@ using SixLabors.ImageSharp;
 using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.Runner
@@ -13,7 +14,7 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
         public class RunTile : Tile
         {
-            public override Task OnTilePressDown()
+            public override Task OnTilePressDown(CancellationToken cancellationToken)
             {
                 var program = Settings?["program"];
                 if (program == null) return Task.CompletedTask; ;
@@ -26,7 +27,7 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
         public class ShellRunTile : Tile
         {
-            public override async Task OnTilePressDown()
+            public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
                 var program = Settings?["program"];
                 if (program == null) return;
@@ -43,7 +44,7 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
         public class OpenWebsiteTile : Tile
         {
-            public override async Task Init()
+            public override async Task Init(CancellationToken cancellationToken)
             {
                 var url = Settings?["url"];
                 if (url == null) return;
@@ -53,7 +54,7 @@ namespace CodeDeck.Plugins.Plugins.Runner
                 Image = Image.Load(favicon);
             }
 
-            public override async Task OnTilePressDown()
+            public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
                 var url = Settings?["url"];
                 if (url == null) return;

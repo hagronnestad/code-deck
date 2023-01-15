@@ -107,12 +107,9 @@ namespace CodeDeck.PluginAbstractions
         public Dictionary<string, string>? Settings { get; set; }
 
 
-        public Tile()
-        {
+        public Tile() { }
 
-        }
-
-        public virtual async Task Init()
+        public virtual async Task Init(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
         }
@@ -122,12 +119,12 @@ namespace CodeDeck.PluginAbstractions
             await Task.CompletedTask;
         }
 
-        public virtual async Task OnTilePressDown()
+        public virtual async Task OnTilePressDown(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
         }
 
-        public virtual async Task OnTilePressUp()
+        public virtual async Task OnTilePressUp(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
         }
