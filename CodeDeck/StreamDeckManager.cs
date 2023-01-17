@@ -11,6 +11,8 @@ using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using CodeDeck.PluginSystem;
 using System.Threading.Tasks;
+using System;
+using StreamDeckSharp;
 
 namespace CodeDeck
 {
@@ -59,7 +61,7 @@ namespace CodeDeck
             _fontCollection.Add("Fonts/Ubuntu-MediumItalic.ttf");
             _fontCollection.Add("Fonts/Ubuntu-Regular.ttf");
 
-            _streamDeck = StreamDeckSharp.StreamDeck.OpenDevice();
+            _streamDeck = StreamDeck.OpenDevice().WithButtonPressEffect();
             _streamDeck.ClearKeys();
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
         }
@@ -204,12 +206,9 @@ namespace CodeDeck
                 switch (keyWrapper.Key.KeyType)
                 {
                     case Key.KEY_TYPE_GOTO_PAGE:
-                        if (keyWrapper.Key.Profile == null || keyWrapper.Key.Page == null) return;
-                        GotoPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
                         break;
 
                     case Key.KEY_TYPE_GO_BACK:
-                        GotoPreviousPage();
                         break;
 
                     case Key.KEY_TYPE_NORMAL:
@@ -222,9 +221,12 @@ namespace CodeDeck
                 switch (keyWrapper.Key.KeyType)
                 {
                     case Key.KEY_TYPE_GOTO_PAGE:
+                        if (keyWrapper.Key.Profile == null || keyWrapper.Key.Page == null) return;
+                        GotoPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
                         break;
 
                     case Key.KEY_TYPE_GO_BACK:
+                        GotoPreviousPage();
                         break;
 
                     case Key.KEY_TYPE_NORMAL:
