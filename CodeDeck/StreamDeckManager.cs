@@ -130,7 +130,14 @@ namespace CodeDeck
 
                 if (keyWrapper.Key.Image != null)
                 {
-                    keyWrapper.Image = Image.Load(keyWrapper.Key.Image);
+                    try
+                    {
+                        keyWrapper.Image = Image.Load(keyWrapper.Key.Image);
+                    }
+                    catch (Exception)
+                    {
+                        keyWrapper.Image = Image.Load("Images/icon.png");
+                    }
                 }
 
                 KeyWrappers.Add(keyWrapper);
