@@ -1,4 +1,4 @@
-﻿using CodeDeck.Models.Configuration;
+using CodeDeck.Models.Configuration;
 using CodeDeck.PluginAbstractions;
 using CodeDeck.PluginSystem;
 using SixLabors.ImageSharp;
@@ -85,7 +85,7 @@ namespace CodeDeck
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Tile.OnTilePressDown(): {e.Message}");
+                Debug.WriteLine($"Tile.OnTilePressDown(): {e.Message}");
             }
         }
 
@@ -99,7 +99,7 @@ namespace CodeDeck
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Tile.OnTilePressUp(): {e.Message}");
+                Debug.WriteLine($"Tile.OnTilePressUp(): {e.Message}");
             }
         }
     }

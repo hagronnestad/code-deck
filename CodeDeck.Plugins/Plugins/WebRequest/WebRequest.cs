@@ -1,5 +1,6 @@
 ﻿using CodeDeck.PluginAbstractions;
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -65,7 +66,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                 {
                     if (cancellationToken.IsCancellationRequested)
                     {
-                        Console.WriteLine($"{nameof(BackgroundTask)} in {nameof(PlainTextTile)} with {_url} was cancelled!");
+                        Debug.WriteLine($"{nameof(BackgroundTask)} in {nameof(PlainTextTile)} with {_url} was cancelled!");
                         return;
                     }
 

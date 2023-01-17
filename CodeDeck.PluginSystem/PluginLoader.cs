@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
@@ -101,7 +101,7 @@ namespace CodeDeck.PluginSystem
                 {
                     foreach (var d in emitResult.Diagnostics)
                     {
-                        Console.WriteLine($"{d.Location}: {d.GetMessage()}");
+                        Debug.WriteLine($"{d.Location}: {d.GetMessage()}");
                     }
 
                     return null;
