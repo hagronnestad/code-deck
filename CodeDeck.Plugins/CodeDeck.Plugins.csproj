@@ -21,6 +21,9 @@
     <Compile Update="Plugins\AudioDeviceSwitcher\AudioDeviceSwitcher.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
+    <Compile Update="Plugins\Clock\Clock.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
     <Compile Update="Plugins\Counter\Counter.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
