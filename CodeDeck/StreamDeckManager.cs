@@ -50,6 +50,14 @@ namespace CodeDeck
             _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
 
             _fontCollection.AddSystemFonts();
+            _fontCollection.Add("Fonts/Ubuntu-Bold.ttf");
+            _fontCollection.Add("Fonts/Ubuntu-BoldItalic.ttf");
+            _fontCollection.Add("Fonts/Ubuntu-Italic.ttf");
+            _fontCollection.Add("Fonts/Ubuntu-Light.ttf");
+            _fontCollection.Add("Fonts/Ubuntu-LightItalic.ttf");
+            _fontCollection.Add("Fonts/Ubuntu-Medium.ttf");
+            _fontCollection.Add("Fonts/Ubuntu-MediumItalic.ttf");
+            _fontCollection.Add("Fonts/Ubuntu-Regular.ttf");
 
             _streamDeck = StreamDeckSharp.StreamDeck.OpenDevice();
             _streamDeck.ClearKeys();
@@ -288,10 +296,11 @@ namespace CodeDeck
             // Add text
             if (text != null && !string.IsNullOrWhiteSpace(text))
             {
-                var fontFamily = _fontCollection.Get(font ?? "Arial");
-                var f = fontFamily.CreateFont(fontSize ?? 16, FontStyle.Bold);
+                if (_fontCollection.TryGet(font ?? "Ubuntu", out var fontFamily))
+                {
+                    var f = fontFamily.CreateFont(fontSize ?? 16, FontStyle.Bold);
 
-                var size = TextMeasurer.Measure(text, new TextOptions(f));
+                    var size = TextMeasurer.Measure(text, new TextOptions(f));
 
                 var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
                 var textOptions = new TextOptions(f)
@@ -299,9 +308,10 @@ namespace CodeDeck
                     Origin = center,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
-                    TextAlignment = TextAlignment.Center,
-                };
-                i.Mutate(x => x.DrawText(textOptions, text, textColor ?? Color.White));
+                        TextAlignment = TextAlignment.Center,
+                    };
+                    i.Mutate(x => x.DrawText(textOptions, text, textColor ?? Color.White));
+                }
             }
 
             // Add indicator
