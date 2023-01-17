@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
@@ -23,6 +23,9 @@
     </Compile>
     <Compile Update="Plugins\Counter\Counter.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\MediaKeys\MediaKeys.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
     <Compile Update="Plugins\PerformanceCounters\PerformanceCounters.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
