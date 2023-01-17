@@ -1,4 +1,4 @@
-using OpenMacroBoard.SDK;
+﻿using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -47,7 +47,7 @@ namespace CodeDeck
 
             _configurationProvider = configurationProvider;
             _pluginLoader = pluginLoader;
-            
+
             _configuration = _configurationProvider.LoadConfiguration();
             _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
 
@@ -125,7 +125,7 @@ namespace CodeDeck
                                        from page in profile.Pages
                                        from key in page.Keys
                                        let plugin = _pluginLoader.LoadedPlugins.FirstOrDefault(x => x.Name == key.Plugin)
-                                       let keyWrapper = new KeyWrapper(profile, page, key, plugin)
+                                       let keyWrapper = new KeyWrapper(_logger, profile, page, key, plugin)
                                        select keyWrapper)
             {
                 keyWrapper.Updated += KeyWrapper_Updated;
@@ -311,12 +311,12 @@ namespace CodeDeck
 
                     var size = TextMeasurer.Measure(text, new TextOptions(f));
 
-                var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
-                var textOptions = new TextOptions(f)
-                {
-                    Origin = center,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
+                    var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
+                    var textOptions = new TextOptions(f)
+                    {
+                        Origin = center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center,
                         TextAlignment = TextAlignment.Center,
                     };
                     i.Mutate(x => x.DrawText(textOptions, text, textColor ?? Color.White));

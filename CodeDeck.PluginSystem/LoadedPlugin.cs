@@ -6,10 +6,11 @@ namespace CodeDeck.PluginSystem
 {
     public class LoadedPlugin
     {
-        public CodeDeckPlugin? Instance { get; set; }
-
-        public string Name { get; set; } = "";
+        public string Name => PluginType.Name;
         public Assembly Assembly { get; set; }
+
+        public Type PluginType { get; set; }
+
 
         public LoadedPlugin(Assembly assembly)
         {
@@ -26,10 +27,22 @@ namespace CodeDeck.PluginSystem
                 return;
             }
 
-            var pluginInstance = Activator.CreateInstance(pluginType) as CodeDeckPlugin;
-            Instance = pluginInstance;
+            PluginType = pluginType;
+        }
 
-            Name = pluginType.Name;
+        public Tile? CreateTileInstance(string tileTypeName)
+        {
+            var tileType = PluginType
+                .GetNestedTypes()
+                .Where(x => x.BaseType == typeof(Tile))
+                .Where(x => x.Name == tileTypeName)
+                .FirstOrDefault();
+
+            if (tileType is null) return null;
+
+            var tileInstance = Activator.CreateInstance(tileType) as Tile;
+
+            return tileInstance;
         }
     }
 }

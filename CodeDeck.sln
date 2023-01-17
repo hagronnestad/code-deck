@@ -18,7 +18,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.PluginAbstractions
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.Plugins", "CodeDeck.Plugins\CodeDeck.Plugins.csproj", "{768C2681-9F72-4657-AB57-8B1F74202167}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeDeck.Windows", "CodeDeck.Windows\CodeDeck.Windows.csproj", "{A2D361D7-EBC4-47E1-A823-5C8D78D099A4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.Windows", "CodeDeck.Windows\CodeDeck.Windows.csproj", "{A2D361D7-EBC4-47E1-A823-5C8D78D099A4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

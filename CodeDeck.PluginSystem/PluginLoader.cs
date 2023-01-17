@@ -1,4 +1,4 @@
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
@@ -20,14 +20,14 @@ namespace CodeDeck.PluginSystem
         public async Task LoadPluginsAsync()
         {
             var pluginFolders = Directory.GetDirectories("Plugins");
+            _logger.LogInformation($"Found plugins: {string.Join(", ",
+                pluginFolders.Select(x => Path.GetDirectoryName(x.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar)))}");
 
             var assemblies = new List<Assembly>();
 
             foreach (var pf in pluginFolders)
             {
                 var pluginFolder = pf.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-
-                _logger.LogInformation($"Loading plugin: {Path.GetDirectoryName(pluginFolder)}");
 
                 var codeFiles = Directory.GetFiles(pluginFolder, "*.cs");
                 var codeFileContents = new List<string>();
@@ -69,7 +69,7 @@ namespace CodeDeck.PluginSystem
             return await Task.Run(() => {
                 var loadedPlugin = new LoadedPlugin(assembly);
                 LoadedPlugins.Add(loadedPlugin);
-                _logger.LogInformation($"Plugin loaded: {assembly}");
+                _logger.LogInformation($"Plugin loaded: {loadedPlugin.Name}");
                 return Task.FromResult(loadedPlugin);
             });
         }
@@ -101,7 +101,7 @@ namespace CodeDeck.PluginSystem
                 {
                     foreach (var d in emitResult.Diagnostics)
                     {
-                        Debug.WriteLine($"{d.Location}: {d.GetMessage()}");
+                        _logger.LogError($"{d.Location}: {d.GetMessage()}");
                     }
 
                     return null;

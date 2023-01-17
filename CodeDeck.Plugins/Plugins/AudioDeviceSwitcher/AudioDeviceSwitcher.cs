@@ -16,7 +16,7 @@ namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
         private static CoreAudioController? _audioController;
         private static IEnumerable<CoreAudioDevice>? _devices;
 
-        public AudioDeviceSwitcher()
+        static AudioDeviceSwitcher()
         {
             _audioController = new CoreAudioController();
             _devices = _audioController.GetPlaybackDevices();

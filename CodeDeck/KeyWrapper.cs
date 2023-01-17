@@ -1,9 +1,10 @@
-using CodeDeck.Models.Configuration;
+﻿using CodeDeck.Models.Configuration;
 using CodeDeck.PluginAbstractions;
 using CodeDeck.PluginSystem;
+using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using System;
-using System.Linq;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,6 +12,8 @@ namespace CodeDeck
 {
     public class KeyWrapper
     {
+        private readonly ILogger _logger;
+
         public Profile Profile { get; set; }
         public Page Page { get; set; }
         public Key Key { get; set; }
@@ -23,8 +26,10 @@ namespace CodeDeck
 
         public event EventHandler<KeyWrapper>? Updated;
 
-        public KeyWrapper(Profile profile, Page page, Key key, LoadedPlugin? plugin)
+        public KeyWrapper(ILogger logger, Profile profile, Page page, Key key, LoadedPlugin? plugin)
         {
+            _logger = logger;
+
             Profile = profile;
             Page = page;
             Key = key;
@@ -33,40 +38,32 @@ namespace CodeDeck
 
         public async Task InstantiateTileObjectAsync()
         {
-            if (Plugin?.Instance == null)
+            if (Plugin is null || Key.Tile is null)
             {
                 return;
             }
 
-            var tileType = Plugin?.Instance
-                .GetType()
-                .GetNestedTypes()
-                .Where(x => x.BaseType == typeof(Tile))
-                .Where(x => x.Name == Key.Tile)
-                .FirstOrDefault();
+            Tile = Plugin.CreateTileInstance(Key.Tile);
 
-            if (tileType != null)
+            if (Tile is null)
             {
-                Tile = Activator.CreateInstance(tileType) as Tile;
-                
-                if (Tile != null)
-                {
-                    Tile.NotifyChange = NotifyChange_Action;
-                    Tile.Text = Key.Text;
-                    Tile.Font = Key.Font;
-                    Tile.FontSize = Key.FontSize;
-                    Tile.Settings = Key.Settings;
-                    Tile.ImagePadding = Key.ImagePadding;
+                return;
+            }
 
-                    try
-                    {
-                        await Tile.Init(CancellationTokenSource.Token);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine($"Tile.Init(): {e.Message}");
-                    }
-                }
+            Tile.NotifyChange = NotifyChange_Action;
+            Tile.Text = Key.Text;
+            Tile.Font = Key.Font;
+            Tile.FontSize = Key.FontSize;
+            Tile.Settings = Key.Settings;
+            Tile.ImagePadding = Key.ImagePadding;
+
+            try
+            {
+                await Tile.Init(CancellationTokenSource.Token);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Exception during 'Tile.Init' in plugin: {Plugin.Name}; tile: {Tile.GetType().Name}. Message: '{e.Message}'");
             }
         }
 
@@ -77,7 +74,7 @@ namespace CodeDeck
 
         public async void HandleKeyPressDown()
         {
-            if (Plugin?.Instance == null || Tile == null) return;
+            if (Tile == null) return;
 
             try
             {
@@ -91,7 +88,7 @@ namespace CodeDeck
 
         public async void HandleKeyPressUp()
         {
-            if (Plugin?.Instance == null || Tile == null) return;
+            if (Tile == null) return;
 
             try
             {
