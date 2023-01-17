@@ -1,6 +1,7 @@
 ﻿using CodeDeck.PluginAbstractions;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,148 +13,90 @@ public class PerformanceCounters : CodeDeckPlugin
 {
     public class CpuUsageTile : Tile
     {
-        private bool _deInit = false;
-
         private PerformanceCounter _cpuUsageCounter = new("Processor Information", "% Processor Utility", "_Total");
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(UpdateTile);
+            _ = Task.Run(() => UpdateTile(cancellationToken), cancellationToken);
             await Task.CompletedTask;
         }
 
-        private async Task UpdateTile()
+        private async Task UpdateTile(CancellationToken cancellationToken)
         {
-            while (!_deInit)
+            for (; ; )
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var cpuUsage = (int)_cpuUsageCounter.NextValue();
                 Text = $"CPU\n{cpuUsage} %";
-                await Task.Delay(1000);
+                await Task.Delay(1000, cancellationToken);
             }
-        }
-
-        public override Task DeInit()
-        {
-            _deInit = true;
-            return base.DeInit();
-        }
-
-        public override async Task OnTilePressDown(CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
         }
     }
 
     public class MemoryUsageTile : Tile
     {
-        private bool _deInit = false;
-
         private PerformanceCounter _memUsageCounter = new("Memory", "% Committed Bytes In Use");
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(UpdateTile);
+            _ = Task.Run(() => UpdateTile(cancellationToken), cancellationToken);
             await Task.CompletedTask;
         }
 
-        private async Task UpdateTile()
+        private async Task UpdateTile(CancellationToken cancellationToken)
         {
-            while (!_deInit)
+            for (; ; )
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 var memUsage = (int)_memUsageCounter.NextValue();
                 Text = $"RAM\n{memUsage} %";
-                await Task.Delay(1000);
+                await Task.Delay(1000, cancellationToken);
             }
-        }
-
-        public override Task DeInit()
-        {
-            _deInit = true;
-            return base.DeInit();
-        }
-
-        public override async Task OnTilePressDown(CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
         }
     }
 
+    /// <summary>
+    /// Based on:
+    /// https://github.com/rocksdanister/lively/blob/d4972447531a0a670ad8f8c4724c7faf7c619d8b/src/livelywpf/livelywpf/Helpers/HWUsageMonitor.cs#L143
+    /// </summary>
     public class GpuUsageTile : Tile
     {
-        private bool _deInit = false;
+        private List<PerformanceCounter> _gpuCounters = new();
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(UpdateTile);
+            var category = new PerformanceCounterCategory("GPU Engine");
+
+            _gpuCounters.AddRange(from string counterName in category.GetInstanceNames()
+                                  where counterName.EndsWith("engtype_3D")
+                                  from PerformanceCounter counter in category.GetCounters(counterName)
+                                  where counter.CounterName == "Utilization Percentage"
+                                  select counter);
+
+            _ = Task.Run(() => UpdateTile(cancellationToken), cancellationToken);
             await Task.CompletedTask;
         }
 
-        private async Task UpdateTile()
+        private async Task UpdateTile(CancellationToken cancellationToken)
         {
-            while (!_deInit)
+            for (; ; )
             {
-                var usage = (int) await GetGpuUsage();
-                Text = $"GPU\n{usage} %";
-                await Task.Delay(1000);
-            }
-        }
-
-        public override Task DeInit()
-        {
-            _deInit = true;
-            return base.DeInit();
-        }
-
-        public override async Task OnTilePressDown(CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Taken from:
-        /// https://github.com/rocksdanister/lively/blob/d4972447531a0a670ad8f8c4724c7faf7c619d8b/src/livelywpf/livelywpf/Helpers/HWUsageMonitor.cs#L143
-        /// </summary>
-        /// <returns></returns>
-        private async Task<float> GetGpuUsage()
-        {
-            try
-            {
-                var category = new PerformanceCounterCategory("GPU Engine");
-                var counterNames = category.GetInstanceNames();
-                var gpuCounters = new List<PerformanceCounter>();
-                var result = 0f;
-
-                foreach (string counterName in counterNames)
+                if (cancellationToken.IsCancellationRequested)
                 {
-                    if (counterName.EndsWith("engtype_3D"))
-                    {
-                        foreach (PerformanceCounter counter in category.GetCounters(counterName))
-                        {
-                            if (counter.CounterName == "Utilization Percentage")
-                            {
-                                gpuCounters.Add(counter);
-                            }
-                        }
-                    }
+                    return;
                 }
 
-                gpuCounters.ForEach(x =>
-                {
-                    _ = x.NextValue();
-                });
-
-                await Task.Delay(1000);
-
-                gpuCounters.ForEach(x =>
-                {
-                    result += x.NextValue();
-                });
-
-                return result;
-            }
-            catch
-            {
-                return 0f;
+                var usage = (int)_gpuCounters.Sum(x => x.NextValue());
+                Text = $"GPU\n{usage} %";
+                await Task.Delay(1000, cancellationToken);
             }
         }
     }
