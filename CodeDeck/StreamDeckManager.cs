@@ -1,4 +1,4 @@
-﻿using OpenMacroBoard.SDK;
+using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -247,7 +247,7 @@ namespace CodeDeck
                         keyWrapper.Tile?.TextColor ?? keyWrapper.Key.TextColorAsColor,
                         keyWrapper.Tile?.BackgroundColor ?? keyWrapper.Key.BackgroundColorAsColor,
                         keyWrapper.Image ?? keyWrapper.Tile?.Image,
-                        keyWrapper.Tile?.ImagePadding,
+                        keyWrapper.Tile?.ImagePadding ?? keyWrapper.Key.ImagePadding,
                         keyWrapper.Tile?.ShowIndicator,
                         keyWrapper.Tile?.IndicatorColor ?? keyWrapper.Key.ActivityIndicatorColorAsColor,
                         keyWrapper.Key.ShowFolderIndicator ??
