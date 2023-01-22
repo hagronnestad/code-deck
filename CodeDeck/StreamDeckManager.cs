@@ -13,6 +13,7 @@ using CodeDeck.PluginSystem;
 using System.Threading.Tasks;
 using System;
 using StreamDeckSharp;
+using Microsoft.Win32;
 
 namespace CodeDeck
 {
@@ -61,9 +62,55 @@ namespace CodeDeck
             _fontCollection.Add("Fonts/Ubuntu-MediumItalic.ttf");
             _fontCollection.Add("Fonts/Ubuntu-Regular.ttf");
 
+            // Handle Lock/UnLock on Windows
+            if (OperatingSystem.IsWindows())
+            {
+                SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+            }
+
             _streamDeck = StreamDeck.OpenDevice().WithButtonPressEffect();
             _streamDeck.ClearKeys();
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
+        }
+
+        /// <summary>
+        /// This event handler switches profiles based on lock/unlock events on Windows
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+
+            var lockScreenProfile = _configuration.Profiles
+                .FirstOrDefault(x => x.ProfileType == Profile.PROFILE_TYPE_LOCK_SCREEN);
+
+            var lockScreenPage = lockScreenProfile?.Pages
+                .FirstOrDefault();
+
+            if (lockScreenProfile is null || lockScreenPage is null) return;
+
+            switch (e.Reason)
+            {
+                case SessionSwitchReason.SessionLock:
+                    _previousProfileName = _currentProfileName;
+                    _previousPageName = _currentPageName;
+
+                    _currentProfileName = lockScreenProfile.Name;
+                    _currentPageName = lockScreenPage.Name;
+
+                    RefreshPage();
+                    break;
+
+                case SessionSwitchReason.SessionUnlock:
+                    _currentProfileName = _previousProfileName;
+                    _currentPageName = _previousPageName;
+                    RefreshPage();
+                    break;
+
+                default:
+                    break;
+            }
         }
 
         /// <summary>
@@ -98,7 +145,9 @@ namespace CodeDeck
         {
             _streamDeck.SetBrightness((byte)_configuration.Brightness);
 
-            var profile = _configuration.Profiles.FirstOrDefault();
+            var profile = _configuration.Profiles
+                .FirstOrDefault(x => x.ProfileType == Profile.PROFILE_TYPE_NORMAL);
+
             if (profile == null)
             {
                 _logger.LogError("No profiles!");
@@ -179,7 +228,9 @@ namespace CodeDeck
         {
             _streamDeck.ClearKeys();
 
-            foreach (var keyWrapper in KeyWrappers.Where(x => x.Page.Name == _currentPageName))
+            foreach (var keyWrapper in KeyWrappers
+                .Where(x => x.Profile.Name == _currentProfileName)
+                .Where(x => x.Page.Name == _currentPageName))
             {
                 UpdateKeyBitmap(keyWrapper);
             }
