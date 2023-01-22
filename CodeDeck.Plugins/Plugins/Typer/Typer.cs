@@ -9,20 +9,18 @@ public class Typer : CodeDeckPlugin
 {
     public class TyperTile : Tile
     {
-        private string? _text;
+        [Setting] public string? Text { get; set; }
+
         private InputSimulator _inputSimulator = new();
 
         public override Task Init(CancellationToken cancellationToken)
         {
-            Settings?.TryGetValue("text", out _text);
-
             return base.Init(cancellationToken);
         }
 
         public override async Task OnTilePressDown(CancellationToken cancellationToken)
         {
-            _inputSimulator.Keyboard.TextEntry(_text ?? "No text specified!");
-
+            _inputSimulator.Keyboard.TextEntry(Text ?? "No text specified!");
             await Task.CompletedTask;
         }
     }

@@ -24,17 +24,17 @@ namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
 
         public class AudioDeviceSwitcherTile : Tile
         {
+            [Setting] public string? Device { get; set; }
+
             private CoreAudioDevice? _device = null;
 
             public override async Task Init(CancellationToken cancellationToken)
             {
-                var deviceName = Settings?["device"];
-                if (deviceName == null) return;
-
+                if (Device == null) return;
                 if (_devices == null) throw new Exception("No devices found!");
 
-                _device = _devices.FirstOrDefault(x => x.FullName == deviceName);
-                if (_device == null) throw new Exception($"Device; '{deviceName}' not found.");
+                _device = _devices.FirstOrDefault(x => x.FullName == Device);
+                if (_device == null) throw new Exception($"Device; '{Device}' not found.");
 
                 await Task.CompletedTask;
             }
