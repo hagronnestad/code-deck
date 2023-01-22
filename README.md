@@ -34,3 +34,7 @@ The `Code`-part of the name is a reference to how configuration and plugins work
 | Stream Deck (Standard) (MK.2) | Untested   |                                          |
 | Stream Deck +                 | Untested   | Stream Deck + has an additional screen (or screen area at least) and rotary knobs. The "standard" buttons might work. |
 | Stream Deck XL                | Untested   |                                          |
+
+
+## Disclaimer
+**Code Deck** is not endorsed by, directly affiliated with, maintained, authorized, or sponsored by Elgato. All product and company names are the registered trademarks of their original owners. The use of any trade name or trademark is for identification and reference purposes only and does not imply any association with the trademark holder of their product brand.
