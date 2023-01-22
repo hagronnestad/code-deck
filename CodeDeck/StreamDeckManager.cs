@@ -1,4 +1,4 @@
-﻿using OpenMacroBoard.SDK;
+using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -133,6 +133,9 @@ namespace CodeDeck
                 .Where(x => x.Plugin != null)
                 .Select(x => x.Tile?.DeInit() ?? Task.CompletedTask));
             KeyWrappers.Clear();
+
+            // Remove IMacroBoard.KeyStateChanged handler
+            if (_streamDeck is not null) _streamDeck.KeyStateChanged -= StreamDeck_KeyStateChanged;
 
             // Apply new configuration and refresh current page
             await ApplyConfigurationAsync();
