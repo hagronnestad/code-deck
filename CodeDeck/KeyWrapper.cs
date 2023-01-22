@@ -43,7 +43,7 @@ namespace CodeDeck
                 return;
             }
 
-            Tile = Plugin.CreateTileInstance(Key.Tile);
+            Tile = Plugin.CreateTileInstance(Key.Tile, Key.Settings);
 
             if (Tile is null)
             {
@@ -54,7 +54,6 @@ namespace CodeDeck
             Tile.Text = Key.Text;
             Tile.Font = Key.Font;
             Tile.FontSize = Key.FontSize;
-            Tile.Settings = Key.Settings;
             Tile.ImagePadding = Key.ImagePadding;
 
             try

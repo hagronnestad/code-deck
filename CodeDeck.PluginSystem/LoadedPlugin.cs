@@ -30,7 +30,7 @@ namespace CodeDeck.PluginSystem
             PluginType = pluginType;
         }
 
-        public Tile? CreateTileInstance(string tileTypeName)
+        public Tile? CreateTileInstance(string tileTypeName, Dictionary<string, string>? settings)
         {
             var tileType = PluginType
                 .GetNestedTypes()
@@ -39,8 +39,43 @@ namespace CodeDeck.PluginSystem
                 .FirstOrDefault();
 
             if (tileType is null) return null;
+            if (Activator.CreateInstance(tileType) is not Tile tileInstance) return null;
 
-            var tileInstance = Activator.CreateInstance(tileType) as Tile;
+            // Assign the raw key settings dictionary to the Tile instance
+            tileInstance.Settings = settings;
+
+            // Map key settings to Tile properties that are annotated with the SettingAttribute
+
+            // Get all properties with the SettingAttribute
+            var settingProperties = tileType.GetProperties()
+                .Where(x => x.CustomAttributes.Any(ca => ca.AttributeType.Name == nameof(SettingAttribute)))
+                .ToList();
+
+            // Try to parse the setting into the correct type and assign the value to the property
+            foreach (var p in settingProperties)
+            {
+                if (settings?.TryGetValue(p.Name, out var value) ?? false)
+                {
+                    if (p.PropertyType == typeof(bool?) || p.PropertyType == typeof(bool))
+                    {
+                        if (bool.TryParse(value, out var parsedValue))
+                        {
+                            p.SetValue(tileInstance, parsedValue);
+                        }
+                    }
+                    else if (p.PropertyType == typeof(int?) || p.PropertyType == typeof(int))
+                    {
+                        if (int.TryParse(value, out var parsedValue))
+                        {
+                            p.SetValue(tileInstance, parsedValue);
+                        }
+                    }
+                    else
+                    {
+                        p.SetValue(tileInstance, value);
+                    }
+                }
+            }
 
             return tileInstance;
         }
