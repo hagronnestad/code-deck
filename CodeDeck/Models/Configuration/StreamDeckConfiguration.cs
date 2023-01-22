@@ -7,6 +7,8 @@ namespace CodeDeck.Models.Configuration
     /// </summary>
     public class StreamDeckConfiguration
     {
+        public string? DevicePath { get; set; }
+
         public int Brightness { get; set; } = 75;
 
         public List<Profile> Profiles { get; set; } = new();

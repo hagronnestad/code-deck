@@ -1,4 +1,4 @@
-using OpenMacroBoard.SDK;
+﻿using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -14,12 +14,13 @@ using System.Threading.Tasks;
 using System;
 using StreamDeckSharp;
 using Microsoft.Win32;
+using Microsoft.CodeAnalysis;
 
 namespace CodeDeck
 {
     public class StreamDeckManager
     {
-        private readonly IMacroBoard _streamDeck;
+        private IMacroBoard _streamDeck;
         private readonly FontCollection _fontCollection = new();
 
         private readonly ILogger<StreamDeckManager> _logger;
@@ -67,10 +68,6 @@ namespace CodeDeck
             {
                 SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
             }
-
-            _streamDeck = StreamDeck.OpenDevice().WithButtonPressEffect();
-            _streamDeck.ClearKeys();
-            _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
         }
 
         /// <summary>
@@ -146,7 +143,46 @@ namespace CodeDeck
 
         public async Task ApplyConfigurationAsync()
         {
-            _streamDeck.SetBrightness((byte)_configuration.Brightness);
+            // Enumerate and open Stream Deck
+            var availableDevices = StreamDeck.EnumerateDevices();
+            if (availableDevices is null)
+            {
+                _logger.LogError("No Stream Deck hardware found!");
+            }
+            else
+            {
+                _logger.LogInformation($"Enumerated Stream Deck devices [{availableDevices.Count()}]:");
+                foreach (var device in availableDevices)
+                {
+                    _logger.LogInformation($"Name: '{device.DeviceName}'; DevicePath: '{device.DevicePath}'; Keys: '{device.Keys.Count}'");
+                }
+
+                try
+                {
+                    if (_configuration.DevicePath is not null)
+                    {
+                        _streamDeck = StreamDeck
+                            .OpenDevice(_configuration.DevicePath)
+                            .WithButtonPressEffect();
+                    }
+                    else
+                    {
+                        _streamDeck = StreamDeck
+                            .OpenDevice()
+                            .WithButtonPressEffect();
+                    }
+
+                    _streamDeck.ClearKeys();
+                    _streamDeck.SetBrightness((byte)_configuration.Brightness);
+                    _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Exception in '{nameof(ApplyConfigurationAsync)}'. Message: '{e.Message}'. This may indicate that an invalid '{nameof(StreamDeckConfiguration.DevicePath)}' was specified.");
+                }
+            }
+
+
 
             var profile = _configuration.Profiles
                 .FirstOrDefault(x => x.ProfileType == Profile.PROFILE_TYPE_NORMAL);
