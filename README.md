@@ -25,6 +25,8 @@
 
 The `Code`-part of the name is a reference to how configuration and plugins work in **Code Deck**. The configuration is done using `JSON` and all plugins are `C#`-scripts.
 
+![Alt text](Screenshots/00-streamdeck.png)
+*Picture of **Code Deck** running my configuration on my Stream Deck.*
 
 ## Concept
 
