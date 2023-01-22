@@ -6,6 +6,7 @@
   - [Description](#description)
   - [Concept](#concept)
     - [Configuration](#configuration)
+    - [Graphical User Interface](#graphical-user-interface)
     - [Key](#key)
     - [Page](#page)
     - [Profile](#profile)
@@ -34,7 +35,18 @@ The `Code`-part of the name is a reference to how configuration and plugins work
 **Code Deck** was made with *control* and *extensibility* as the primary goals. **Code Deck** strives to be light-weight, but that heavily depends on the users plugins and configuration.
 
 ### Configuration
-The complete configuration is contained within a single `JSON`-file. Changes to the configuration are automatically applied.
+**Code Deck** is configured using a single `JSON`-file. The configuration file must be located in the same directory as the **Code Deck** executable. If no configuration file exists, a default configuration will be created on startup. Changes to the configuration are automatically applied.
+
+The configuration file is called `deck.json`.
+
+
+### Graphical User Interface
+**Code Deck** *DOES NOT* have a graphical user interface for configuration.
+
+Windows users may use `CodeDeck.Windows.exe` which adds an icon to the notification area on the taskbar. The icon has a context menu with easy access to the configuration file and a way to easily exit **Code Deck**.
+
+![Alt text](Screenshots/01-notificationicon.png)
+
 
 ### Key
 - A single key on the Stream Deck.
