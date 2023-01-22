@@ -26,7 +26,7 @@ namespace CodeDeck
                 })
                 .ConfigureLogging((hostBuilder, logging) =>
                 {
-                    //logging.ClearProviders();
+                    logging.ClearProviders();
 
                     logging.SetMinimumLevel(LogLevel.Debug);
                     logging.AddConsole();
