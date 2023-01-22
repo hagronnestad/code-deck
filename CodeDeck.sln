@@ -20,6 +20,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.Plugins", "CodeDec
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.Windows", "CodeDeck.Windows\CodeDeck.Windows.csproj", "{A2D361D7-EBC4-47E1-A823-5C8D78D099A4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeDeck.Linux", "CodeDeck.Linux\CodeDeck.Linux.csproj", "{32159347-5F3A-4AD3-B590-A433DC19EBA5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{A2D361D7-EBC4-47E1-A823-5C8D78D099A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2D361D7-EBC4-47E1-A823-5C8D78D099A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2D361D7-EBC4-47E1-A823-5C8D78D099A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32159347-5F3A-4AD3-B590-A433DC19EBA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32159347-5F3A-4AD3-B590-A433DC19EBA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32159347-5F3A-4AD3-B590-A433DC19EBA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32159347-5F3A-4AD3-B590-A433DC19EBA5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
