@@ -16,6 +16,7 @@
     - [Plugin Development](#plugin-development)
   - [Supported Stream Decks](#supported-stream-decks)
     - [Tested Stream Decks](#tested-stream-decks)
+  - [Attributions](#attributions)
   - [Disclaimer](#disclaimer)
 
 
@@ -118,6 +119,13 @@ Read about plugin development [here!](CodeDeck.Plugins/Plugins/)
 | Stream Deck (Standard) (MK.2) | Untested   |                                          |
 | Stream Deck +                 | Untested   | Stream Deck + has an additional screen (or screen area at least) and rotary knobs. The "standard" buttons might work. |
 | Stream Deck XL                | Untested   |                                          |
+
+
+## Attributions
+
+**Code Deck** makes heavy use of the following great libraries:
+- [StreamDeckSharp](https://github.com/OpenMacroBoard/StreamDeckSharp)
+- [ImageSharp](https://github.com/SixLabors/ImageSharp)
 
 
 ## Disclaimer
