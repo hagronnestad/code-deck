@@ -1,4 +1,4 @@
-using CodeDeck.Models.Configuration;
+﻿using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -110,72 +110,65 @@ namespace CodeDeck
                         {
                             new Page()
                             {
-                                Name = "Home",
+                                Name = "Page1",
                                 Keys = new List<Key>()
                                 {
                                     new Key()
                                     {
-                                        Index = 0,
-                                        Text = "Code\nDeck",
-                                    },
-
-                                    new Key()
-                                    {
                                         Index = 1,
-                                        Plugin = "Runner",
-                                        Tile = "ShellRunTile",
-                                        Text = "Calc",
-                                        Settings = new()
-                                        {
-                                            { "program", "calc.exe" }
-                                        },
+                                        Text = "CODE",
+                                        BackgroundColor = "#0b367f"
                                     },
-
                                     new Key()
                                     {
                                         Index = 2,
                                         Plugin = "Runner",
                                         Tile = "OpenWebsiteTile",
+                                        Image = "Image/icon.png",
                                         ImagePadding = 5,
                                         Settings = new() {
-                                            { "url", "https://youtube.com" }
+                                            { "Url", "https://heinandre.no/code-deck" }
                                         },
                                     },
-
                                     new Key()
                                     {
                                         Index = 3,
-                                        Plugin = "Counter",
-                                        Tile = "CounterTile",
+                                        Text = "DECK",
+                                        BackgroundColor = "#47750b"
                                     },
-
                                     new Key()
                                     {
-                                        Index = 4,
+                                        Index = 11,
+                                        Plugin = "Counter",
+                                        Tile = "CounterTile",
+                                        BackgroundColor = "#b52610"
+                                    },
+                                    new Key()
+                                    {
+                                        Index = 13,
                                         KeyType = Key.KEY_TYPE_GOTO_PAGE,
                                         Profile = "DefaultProfile",
-                                        Page = "Gaming",
-                                        Text = "Gaming\nFolder",
+                                        Page = "Page2",
+                                        Text = "GO TO\nPAGE 2",
                                     },
                                 }
                             },
-
                             new Page()
                             {
-                                Name = "Gaming",
+                                Name = "Page2",
                                 Keys = new List<Key>()
                                 {
                                     new Key()
                                     {
                                         Index = 0,
                                         Text = "BACK",
-                                        KeyType = Key.KEY_TYPE_GO_BACK
+                                        KeyType = Key.KEY_TYPE_GO_BACK,
+                                        BackgroundColor = "#333333"
                                     },
-
                                     new Key()
                                     {
                                         Index = 1,
-                                        Text = "Gaming...",
+                                        Text = "THIS IS\nPAGE 2",
                                     }
                                 }
                             }
