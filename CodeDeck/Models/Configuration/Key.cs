@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace CodeDeck.Models.Configuration
 {
@@ -36,62 +37,6 @@ namespace CodeDeck.Models.Configuration
         public bool? ShowFolderIndicator { get; set; }
         public string? FolderIndicatorColor { get; set; }
 
-        public Color? TextColorAsColor
-        {
-            get
-            {
-                try
-                {
-                    if (TextColor != null) return Color.ParseHex(TextColor);
-                }
-                catch (Exception) { }
-
-                return null;
-            }
-        }
-
-        public Color? BackgroundColorAsColor
-        {
-            get
-            {
-                try
-                {
-                    if (BackgroundColor != null) return Color.ParseHex(BackgroundColor);
-                }
-                catch (Exception) { }
-
-                return null;
-            }
-        }
-
-        public Color? ActivityIndicatorColorAsColor
-        {
-            get
-            {
-                try
-                {
-                    if (ActivityIndicatorColor != null) return Color.ParseHex(ActivityIndicatorColor);
-                }
-                catch (Exception) { }
-
-                return null;
-            }
-        }
-
-        public Color? FolderIndicatorColorAsColor
-        {
-            get
-            {
-                try
-                {
-                    if (FolderIndicatorColor != null) return Color.ParseHex(FolderIndicatorColor);
-                }
-                catch (Exception) { }
-
-                return null;
-            }
-        }
-
         /// <summary>
         /// Plugin reference
         /// </summary>
@@ -111,5 +56,67 @@ namespace CodeDeck.Models.Configuration
         /// </summary>
         // TODO: Should this be a typed object, type defined by Tile
         public Dictionary<string, string>? Settings { get; set; }
+
+
+
+        [JsonIgnore]
+        public Color? TextColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (TextColor != null) return Color.ParseHex(TextColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
+
+        [JsonIgnore]
+        public Color? BackgroundColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (BackgroundColor != null) return Color.ParseHex(BackgroundColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
+
+        [JsonIgnore]
+        public Color? ActivityIndicatorColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (ActivityIndicatorColor != null) return Color.ParseHex(ActivityIndicatorColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
+
+        [JsonIgnore]
+        public Color? FolderIndicatorColorAsColor
+        {
+            get
+            {
+                try
+                {
+                    if (FolderIndicatorColor != null) return Color.ParseHex(FolderIndicatorColor);
+                }
+                catch (Exception) { }
+
+                return null;
+            }
+        }
     }
 }
