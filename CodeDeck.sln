@@ -5,11 +5,6 @@ VisualStudioVersion = 17.4.33122.133
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck", "CodeDeck\CodeDeck.csproj", "{2EE46B70-1CD7-4F03-AA7A-F901385DD558}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F99330EC-4621-4DE6-AD56-AA26D397DE01}"
-	ProjectSection(SolutionItems) = preProject
-		ToDo.txt = ToDo.txt
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeDeck.PluginSystem", "CodeDeck.PluginSystem\CodeDeck.PluginSystem.csproj", "{E3171EA4-3905-4A9A-B7DB-282BE8AFAD32}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{D0333636-23F1-4088-9BA9-AF8FEB903AB1}"
