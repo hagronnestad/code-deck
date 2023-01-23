@@ -1,9 +1,10 @@
-﻿using CodeDeck.Models.Configuration;
+using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CodeDeck
 {
@@ -48,7 +49,8 @@ namespace CodeDeck
                     var defaultJson = JsonSerializer.Serialize(defaultConfiguration,
                         new JsonSerializerOptions()
                         {
-                            WriteIndented = true
+                            WriteIndented = true,
+                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
                         });
                     File.WriteAllText(CONFIGURATION_FILE_NAME, defaultJson);
                     _logger.LogWarning($"Default configuration file created. Filename: {CONFIGURATION_FILE_NAME}");
