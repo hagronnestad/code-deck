@@ -31,7 +31,7 @@ namespace CodeDeck.Windows
                 {
                     Process.Start(new ProcessStartInfo()
                     {
-                        FileName = ConfigurationProvider.CONFIGURATION_FILE_NAME,
+                        FileName = ConfigurationProvider.ConfigFile,
                         UseShellExecute = true
                     });
                 }

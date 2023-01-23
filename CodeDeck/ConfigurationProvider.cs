@@ -13,29 +13,50 @@ namespace CodeDeck
         public event EventHandler? ConfigurationChanged;
 
         public const string CONFIGURATION_FILE_NAME = "deck.json";
-        private readonly ILogger<ConfigurationProvider> _logger;
+        public const string CONFIGURATION_FOLDER_NAME = ".codedeck";
 
+        public static readonly string UserFolder;
+        public static readonly string ConfigFolder;
+        public static readonly string ConfigFile;
+
+        private readonly ILogger<ConfigurationProvider> _logger;
         private readonly FileSystemWatcher _fileSystemWatcher;
+
+        static ConfigurationProvider()
+        {
+            UserFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            ConfigFolder = Path.Combine(UserFolder, CONFIGURATION_FOLDER_NAME);
+            ConfigFile = Path.Combine(ConfigFolder, CONFIGURATION_FILE_NAME);
+        }
 
         public ConfigurationProvider(ILogger<ConfigurationProvider> logger)
         {
             _logger = logger;
 
-            _fileSystemWatcher = new FileSystemWatcher(@".")
+            // Make sure configuration folder exists
+            if (!Directory.Exists(ConfigFolder))
+            {
+                Directory.CreateDirectory(ConfigFolder);
+            }
+
+            // Set up file system watcher
+            _fileSystemWatcher = new FileSystemWatcher(ConfigFolder)
             {
                 Filter = CONFIGURATION_FILE_NAME,
                 EnableRaisingEvents = true,
                 NotifyFilter = NotifyFilters.LastWrite
             };
 
-            _fileSystemWatcher.Changed += (sender, e) => {
+            // Handle file system watcher changed event
+            _fileSystemWatcher.Changed += (sender, e) =>
+            {
                 ConfigurationChanged?.Invoke(this, e);
             };
         }
 
         public bool DoesConfigurationFileExists()
         {
-            return File.Exists(CONFIGURATION_FILE_NAME);
+            return File.Exists(ConfigFile);
         }
 
         public StreamDeckConfiguration LoadConfiguration()
@@ -44,7 +65,7 @@ namespace CodeDeck
             {
                 if (!DoesConfigurationFileExists())
                 {
-                    _logger.LogError($"Configuration file does not exist. Filename: {CONFIGURATION_FILE_NAME}");
+                    _logger.LogError($"Configuration file does not exist. Filename: {ConfigFile}");
                     var defaultConfiguration = CreateDefaultConfiguration();
                     var defaultJson = JsonSerializer.Serialize(defaultConfiguration,
                         new JsonSerializerOptions()
@@ -52,11 +73,11 @@ namespace CodeDeck
                             WriteIndented = true,
                             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
                         });
-                    File.WriteAllText(CONFIGURATION_FILE_NAME, defaultJson);
-                    _logger.LogWarning($"Default configuration file created. Filename: {CONFIGURATION_FILE_NAME}");
+                    File.WriteAllText(ConfigFile, defaultJson);
+                    _logger.LogWarning($"Default configuration file created. Filename: {ConfigFile}");
                 }
 
-                var json = File.ReadAllText(CONFIGURATION_FILE_NAME);
+                var json = File.ReadAllText(ConfigFile);
 
                 var configuration = JsonSerializer.Deserialize<StreamDeckConfiguration>(json, new JsonSerializerOptions()
                 {
