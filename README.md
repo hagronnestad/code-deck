@@ -91,29 +91,29 @@ Plugins are located in the `Plugins`-directory. All plugins are coded in `C#` an
 
 ### List Of Built In Plugins & Tiles
 
-| Name                | Tile                    | OS Support | Description |
-|---------------------|-------------------------|------------|-------------|
-| AudioDeviceSwitcher | AudioDeviceSwitcherTile | 🪟        |             |
-| Clock               | DigitalClockTile        | 🪟🐧      |             |
-| Counter             | CounterTile             | 🪟🐧      |             |
-| Lock                | LockTile                | 🪟        |             |
-| MediaKeys           | MuteTile                | 🪟        |             |
-|                     | VolumeDownTile          | 🪟        |             |
-|                     | VolumeUpTile            | 🪟        |             |
-|                     | NextTrackTile           | 🪟        |             |
-|                     | PreviousTrackTile       | 🪟        |             |
-|                     | StopTile                | 🪟        |             |
-|                     | PlayPauseTile           | 🪟        |             |
-| PerformanceCounters | CpuUsageTile            | 🪟        |             |
-|                     | MemoryUsageTile         | 🪟        |             |
-|                     | GpuUsageTile            | 🪟        |             |
-| Runner              | RunTile                 | 🪟🐧      |             |
-|                     | OpenWebsiteTile         | 🪟🐧      |             |
-| Template            | TemplateTileOne         | 🪟🐧      |             |
-|                     | TemplateTileTwo         | 🪟🐧      |             |
-| KeyboardSimulator   | TyperTile               | 🪟        |             |
-|                     | HotkeyTile              | 🪟        |             |
-| WebRequest          | PlainTextTile           | 🪟🐧      |             |
+| Name                | Tile                                                        | OS Support | Description |
+| ------------------- | ----------------------------------------------------------- | ---------- | ----------- |
+| AudioDeviceSwitcher | AudioDeviceSwitcherTile                                     | 🪟          |             |
+| Clock               | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md) | 🪟🐧         |             |
+| Counter             | CounterTile                                                 | 🪟🐧         |             |
+| Lock                | LockTile                                                    | 🪟          |             |
+| MediaKeys           | MuteTile                                                    | 🪟          |             |
+|                     | VolumeDownTile                                              | 🪟          |             |
+|                     | VolumeUpTile                                                | 🪟          |             |
+|                     | NextTrackTile                                               | 🪟          |             |
+|                     | PreviousTrackTile                                           | 🪟          |             |
+|                     | StopTile                                                    | 🪟          |             |
+|                     | PlayPauseTile                                               | 🪟          |             |
+| PerformanceCounters | CpuUsageTile                                                | 🪟          |             |
+|                     | MemoryUsageTile                                             | 🪟          |             |
+|                     | GpuUsageTile                                                | 🪟          |             |
+| Runner              | RunTile                                                     | 🪟🐧         |             |
+|                     | OpenWebsiteTile                                             | 🪟🐧         |             |
+| Template            | TemplateTileOne                                             | 🪟🐧         |             |
+|                     | TemplateTileTwo                                             | 🪟🐧         |             |
+| KeyboardSimulator   | TyperTile                                                   | 🪟          |             |
+|                     | HotkeyTile                                                  | 🪟          |             |
+| WebRequest          | PlainTextTile                                               | 🪟🐧         |             |
 
 
 ### Plugin Development
@@ -126,13 +126,13 @@ Read about plugin development [here!](CodeDeck.Plugins/Plugins/)
 
 ### Tested Stream Decks
 
-| Stream Deck Hardware          | Status     | Notes                                    |
-|-------------------------------|------------|------------------------------------------|
-| Stream Deck Mini              | Untested   |                                          |
-| Stream Deck (Standard) (MK.1) | ✔️         |                                          |
-| Stream Deck (Standard) (MK.2) | Untested   |                                          |
-| Stream Deck +                 | Untested   | Stream Deck + has an additional screen (or screen area at least) and rotary knobs. The "standard" buttons might work. |
-| Stream Deck XL                | Untested   |                                          |
+| Stream Deck Hardware          | Status   | Notes                                                                                                                 |
+| ----------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| Stream Deck Mini              | Untested |                                                                                                                       |
+| Stream Deck (Standard) (MK.1) | ✔️        |                                                                                                                       |
+| Stream Deck (Standard) (MK.2) | Untested |                                                                                                                       |
+| Stream Deck +                 | Untested | Stream Deck + has an additional screen (or screen area at least) and rotary knobs. The "standard" buttons might work. |
+| Stream Deck XL                | Untested |                                                                                                                       |
 
 
 ## Attributions
