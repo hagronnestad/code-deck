@@ -105,12 +105,12 @@ namespace CodeDeck
                 {
                     new Profile()
                     {
-                        Name = "DefaultProfile",
+                        Name = Profile.PROFILE_DEFAULT_NAME,
                         Pages = new List<Page>()
                         {
                             new Page()
                             {
-                                Name = "Page1",
+                                Name = Page.PAGE_DEFAULT_NAME,
                                 Keys = new List<Key>()
                                 {
                                     new Key()
