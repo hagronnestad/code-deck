@@ -96,6 +96,7 @@ Plugins are located in the `Plugins`-directory. All plugins are coded in `C#` an
 | AudioDeviceSwitcher | AudioDeviceSwitcherTile | 🪟        |             |
 | Clock               | DigitalClockTile        | 🪟🐧      |             |
 | Counter             | CounterTile             | 🪟🐧      |             |
+| Lock                | LockTile                | 🪟        |             |
 | MediaKeys           | MuteTile                | 🪟        |             |
 |                     | VolumeDownTile          | 🪟        |             |
 |                     | VolumeUpTile            | 🪟        |             |
