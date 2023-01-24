@@ -110,7 +110,8 @@ Plugins are located in the `Plugins`-directory. All plugins are coded in `C#` an
 |                     | OpenWebsiteTile         | 🪟🐧      |             |
 | Template            | TemplateTileOne         | 🪟🐧      |             |
 |                     | TemplateTileTwo         | 🪟🐧      |             |
-| Typer               | TyperTile               | 🪟        |             |
+| KeyboardSimulator   | TyperTile               | 🪟        |             |
+|                     | HotkeyTile              | 🪟        |             |
 | WebRequest          | PlainTextTile           | 🪟🐧      |             |
 
 

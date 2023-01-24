@@ -40,7 +40,7 @@
     <Compile Update="Plugins\Template\Template.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
-    <Compile Update="Plugins\Typer\Typer.cs">
+    <Compile Update="Plugins\KeyboardSimulator\KeyboardSimulator.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
     <Compile Update="Plugins\WebRequest\WebRequest.cs">
