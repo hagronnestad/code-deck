@@ -5,13 +5,18 @@
 - [Code Deck](#code-deck)
   - [Description](#description)
   - [Concept](#concept)
-    - [Configuration](#configuration)
-    - [Graphical User Interface](#graphical-user-interface)
     - [Key](#key)
     - [Page](#page)
     - [Profile](#profile)
     - [Tile](#tile)
     - [Plugin](#plugin)
+  - [Graphical User Interface](#graphical-user-interface)
+  - [Configuration](#configuration)
+    - [Configuration File Structure](#configuration-file-structure)
+      - [Stream Deck](#stream-deck)
+      - [Profile](#profile-1)
+      - [Page](#page-1)
+      - [Key](#key-1)
   - [Plugins](#plugins)
     - [List Of Built In Plugins \& Tiles](#list-of-built-in-plugins--tiles)
     - [Plugin Development](#plugin-development)
@@ -33,26 +38,6 @@ The `Code`-part of the name is a reference to how configuration and plugins work
 ## Concept
 
 **Code Deck** was made with *control* and *extensibility* as the primary goals. **Code Deck** strives to be light-weight, but that heavily depends on the users plugins and configuration.
-
-
-### Configuration
-**Code Deck** is configured using a single `JSON`-file. The configuration file must be located in your user folder. If no configuration file exists, a default configuration will be created on startup. Changes to the configuration are automatically applied.
-
-Full path to configuration file:
-- 🪟 Windows
-  - `C:\Users\{username}\.codedeck\deck.json`
-
-- 🐧 Linux
-  - `~/.codedeck/deck.json`
-  - `/home/{username}/.codedeck/deck.json`
-
-
-### Graphical User Interface
-**Code Deck** *DOES NOT* have a graphical user interface for configuration.
-
-Windows users may use `CodeDeck.Windows.exe` which adds an icon to the notification area on the taskbar. The icon has a context menu with easy access to the configuration file and a way to easily exit **Code Deck**.
-
-![Alt text](Screenshots/01-notificationicon.png)
 
 
 ### Key
@@ -88,6 +73,156 @@ Windows users may use `CodeDeck.Windows.exe` which adds an icon to the notificat
 - Plugins are written in `C#`.
 - Plugins are compiled on the fly when **Code Deck** starts.
 - All plugins can be modified by the user.
+
+
+## Graphical User Interface
+**Code Deck** *DOES NOT* have a graphical user interface for configuration.
+
+Windows users may use `CodeDeck.Windows.exe` which adds an icon to the notification area on the taskbar. The icon has a context menu with easy access to the configuration file and a way to easily exit **Code Deck**.
+
+![Alt text](Screenshots/01-notificationicon.png)
+
+
+## Configuration
+**Code Deck** is configured using a single `JSON`-file. The configuration file must be located in your user folder. If no configuration file exists, a default configuration will be created on startup. Changes to the configuration are automatically applied.
+
+Full path to configuration file:
+- 🪟 Windows
+  - `C:\Users\{username}\.codedeck\deck.json`
+
+- 🐧 Linux
+  - `~/.codedeck/deck.json`
+  - `/home/{username}/.codedeck/deck.json`
+
+
+### Configuration File Structure
+
+```json
+{
+  // Stream Deck
+  "Brightness": 100,
+  "Profiles": [
+    {
+      // Profile
+      "Name": "DefaultProfile",
+      "Pages": [
+        {
+          // Page
+          "Name": "DefaultPage",
+          "Keys": [
+            {
+              // Key
+              "Index": 1,
+              "Text": "CODE"
+            },
+            // More Keys ...
+          ]
+        },
+        // More Pages ...
+      ]
+    },
+    // More Profiles ...
+  ]
+}
+```
+
+#### Stream Deck
+
+```json
+{
+  "Brightness": 100,
+  "DevicePath": null,
+  "Profiles": []
+}
+```
+
+| Field      | Values      | Description                                                                       |
+| ---------- | ----------- | --------------------------------------------------------------------------------- |
+| Brightness | `100`       | Brightness in percent.                                                            |
+| DevicePath | `null`      | Path to a specific device, can be used in the case of multiple connected devices. |
+| Profiles   | `Profile[]` | An array of `Profile` objects.                                                    |
+
+
+#### Profile
+
+```json
+{
+  "Name": "DefaultProfile",
+  "ProfileType": "Normal",
+  "Pages": []
+}
+```
+
+| Field       | Values                      | Description                 |
+| ----------- | --------------------------- | --------------------------- |
+| ProfileType | `"Normal" \| "LockScreen"*` | Profile type.               |
+| Name        | `DefaultProfile`            | Name of the profile.        |
+| Pages       | `Page[]`                    | An array of `Page` objects. |
+
+`*"LockScreen"` is only supported on Windows for now. If a profile of this type exists, **Code Deck** will automatically change to that profile when the computer is locked.
+
+
+#### Page
+
+```json
+{
+  "Name": "DefaultPage",
+  "Pages": []
+}
+```
+
+| Field | Values           | Description                 |
+| ----- | ---------------- | --------------------------- |
+| Name  | `DefaultProfile` | Name of the profile.        |
+| Keys  | `Key[]`          | An array of `Page` objects. |
+
+
+#### Key
+
+```json
+{
+  "Index": 0,
+  "Text": "Clock",
+  "Font": "Ubuntu",
+  "FontSize": 18,
+  "TextColor": "#ffffff",
+  "BackgroundColor": "#000000",
+  "Image": "image.png",
+  "ImagePadding": 5,
+  "ShowFolderIndicator": false,
+  "FolderIndicatorColor": "#ff0000",
+  "ActivityIndicatorColor": "#00ff00",
+  "KeyType": "Normal",
+  "Plugin": "Clock",
+  "Tile": "DigitalClockTile",
+  "Settings": {
+    "Format": "dd.\nMMM",
+    "Interval": "60000"
+  }
+}
+```
+
+| Field                  | Example Values                     | Description                                                                                                                                           |
+| ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Index                  | `0` ... `X`                        | Index of the key on the Stream Deck. `X` = number of keys - `1`.                                                                                      |
+| Text                   | `"Some Text"`                      | The text to show on the key. Text is always centered. Use `\n` for multiple lines.                                                                    |
+| Font                   | `"Font Name"`                      | Name of the font to use for the `Text`.                                                                                                               |
+| FontSize               | `10`                               | Size of the `Font`.                                                                                                                                   |
+| TextColor              | `"#ffffff"`                        | Color of the `Text`.                                                                                                                                  |
+| BackgroundColor        | `"#000000"`                        | Color of the background color of the key.                                                                                                             |
+| Image                  | `filename.png`                     | Path to an image file. The image will be shown on the key.                                                                                            |
+| ImagePadding           | `5`                                | A padding to apply to the image. Very useful when trying to match all image sizes.                                                                    |
+| ShowFolderIndicator    | `true` \| `false`                  | An optional indicator to show on keys with `KeyType` = `Page`. The indicator is a line at the bottom of the key.                                      |
+| FolderIndicatorColor   | `"#cccccc"`                        |                                                                                                                                                       |
+| ActivityIndicatorColor | `"#ffff00"`                        | Color of the activity indicator. Some plugins may show this indicator while doing some task. The indicator is a small circle in the top right corner. |
+| KeyType                | `"Normal"` \| `"Back"` \| `"Page"` | The type of key. Default is `"Normal"`. `"Page"` is a key that navigates to another page. `"Back"` is a key that navigates backwards.                 |
+| Profile                | `"ProfileName"`                    | The name of the `Profile` that contains the `Page` to navigate to.                                                                                    |
+| Page                   | `"PageName"`                       | The name of the `Page` to navigate to.                                                                                                                |
+| Plugin                 | `"PluginName"`                     | The name of the `Plugin` to associate with this key.                                                                                                  |
+| Tile                   | `"TileName"`                       | The name of the `Tile` to associate with this key.                                                                                                    |
+| Settings               | `{ "Key": "Value", ... }`          | A key/value dictionary containing the settings needed to configure the `Tile`. All values ***MUST*** be `string`s.                                    |
+
+All fields are optional except for `Index`.
 
 
 ## Plugins
