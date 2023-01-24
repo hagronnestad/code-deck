@@ -1,4 +1,4 @@
-using OpenMacroBoard.SDK;
+﻿using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -30,11 +30,7 @@ namespace CodeDeck
 
         public List<KeyWrapper> KeyWrappers { get; set; } = new();
 
-        public string? _previousProfileName = null;
-        public string? _currentProfileName;
-
-        public string? _previousPageName = null;
-        public string? _currentPageName;
+        private readonly Stack<(string profileName, string pageName)> _navigationStack = new();
 
         private bool _applyingConfiguration = false;
 
@@ -137,18 +133,12 @@ namespace CodeDeck
             switch (e.Reason)
             {
                 case SessionSwitchReason.SessionLock:
-                    _previousProfileName = _currentProfileName;
-                    _previousPageName = _currentPageName;
-
-                    _currentProfileName = lockScreenProfile.Name;
-                    _currentPageName = lockScreenPage.Name;
-
+                    _navigationStack.Push((lockScreenProfile.Name, lockScreenPage.Name));
                     RefreshPage();
                     break;
 
                 case SessionSwitchReason.SessionUnlock:
-                    _currentProfileName = _previousProfileName;
-                    _currentPageName = _previousPageName;
+                    _navigationStack.Pop();
                     RefreshPage();
                     break;
 
@@ -194,15 +184,15 @@ namespace CodeDeck
                 _logger.LogError("No profiles!");
                 return;
             }
-            _currentProfileName ??= profile?.Name;
 
-            var page = profile?.Pages?.FirstOrDefault();
+            var page = profile.Pages?.FirstOrDefault();
             if (page == null)
             {
                 _logger.LogError("No pages!");
                 return;
             }
-            _currentPageName ??= page?.Name;
+
+            if (_navigationStack.Count == 0) _navigationStack.Push((profile.Name, page.Name));
 
             await CreateKeyWrappers();
 
@@ -256,11 +246,7 @@ namespace CodeDeck
 
             if (profile != null && page != null)
             {
-                _previousProfileName = _currentProfileName;
-                _currentProfileName = profile.Name;
-                _previousPageName = _currentPageName;
-                _currentPageName = page.Name;
-
+                _navigationStack.Push((profile.Name, page.Name));
                 RefreshPage();
             }
         }
@@ -268,10 +254,11 @@ namespace CodeDeck
         public void RefreshPage()
         {
             _streamDeck.ClearKeys();
+            var (profileName, pageName) = _navigationStack.Peek();
 
             foreach (var keyWrapper in KeyWrappers
-                .Where(x => x.Profile.Name == _currentProfileName)
-                .Where(x => x.Page.Name == _currentPageName))
+                .Where(x => x.Profile.Name == profileName)
+                .Where(x => x.Page.Name == pageName))
             {
                 UpdateKeyBitmap(keyWrapper);
             }
@@ -279,15 +266,20 @@ namespace CodeDeck
 
         public void GotoPreviousPage()
         {
-            if (_previousProfileName == null || _previousPageName == null) return;
-            GotoPage(_previousProfileName, _previousPageName);
+            if (_navigationStack.Count < 2) return;
+            _navigationStack.Pop();
+            var (profileName, pageName) = _navigationStack.Peek();
+            GotoPage(profileName, pageName);
         }
 
         private void StreamDeck_KeyStateChanged(object? sender, KeyEventArgs e)
         {
+            if (_navigationStack.Count == 0) return;
+            var (profileName, pageName) = _navigationStack.Peek();
+
             var keyWrapper = KeyWrappers
-                .Where(x => x.Profile.Name == _currentProfileName)
-                .Where(x => x.Page.Name == _currentPageName)
+                .Where(x => x.Profile.Name == profileName)
+                .Where(x => x.Page.Name == pageName)
                 .Where(x => x.Key.Index == e.Key)
                 .FirstOrDefault();
 
@@ -335,7 +327,9 @@ namespace CodeDeck
         /// <param name="keyWrapper"></param>
         private void KeyWrapper_Updated(object? sender, KeyWrapper keyWrapper)
         {
-            if (_currentProfileName != keyWrapper.Profile.Name || _currentPageName != keyWrapper.Page.Name) return;
+            if (_navigationStack.Count == 0) return;
+            var (profileName, pageName) = _navigationStack.Peek();
+            if (profileName != keyWrapper.Profile.Name || pageName != keyWrapper.Page.Name) return;
 
             UpdateKeyBitmap(keyWrapper);
         }

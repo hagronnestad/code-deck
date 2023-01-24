@@ -7,7 +7,9 @@ namespace CodeDeck.Models.Configuration
     /// </summary>
     public class Page
     {
-        public string? Name { get; set; }
+        public const string PAGE_DEFAULT_NAME = "DefaultPage";
+
+        public string Name { get; set; } = PAGE_DEFAULT_NAME;
         public List<Key> Keys { get; set; } = new();
     }
 }
