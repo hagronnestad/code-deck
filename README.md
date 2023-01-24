@@ -34,10 +34,17 @@ The `Code`-part of the name is a reference to how configuration and plugins work
 
 **Code Deck** was made with *control* and *extensibility* as the primary goals. **Code Deck** strives to be light-weight, but that heavily depends on the users plugins and configuration.
 
-### Configuration
-**Code Deck** is configured using a single `JSON`-file. The configuration file must be located in the same directory as the **Code Deck** executable. If no configuration file exists, a default configuration will be created on startup. Changes to the configuration are automatically applied.
 
-The configuration file is called `deck.json`.
+### Configuration
+**Code Deck** is configured using a single `JSON`-file. The configuration file must be located in your user folder. If no configuration file exists, a default configuration will be created on startup. Changes to the configuration are automatically applied.
+
+Full path to configuration file:
+- 🪟 Windows
+  - `C:\Users\{username}\.codedeck\deck.json`
+
+- 🐧 Linux
+  - `~/.codedeck/deck.json`
+  - `/home/{username}/.codedeck/deck.json`
 
 
 ### Graphical User Interface
