@@ -16,10 +16,14 @@ Shows the current time and/or date in digital format on a key. Time format can b
 ### Example:
 
 ```json
+{
+    "Plugin": "Clock",
+    "Tile": "DigitalClockTile",
     "Settings": {
         "Format": "HH\\:mm\ndddd",
         "Interval": "60000"
     }
+}
 ```
 
 #### Format
