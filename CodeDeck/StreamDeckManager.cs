@@ -1,4 +1,4 @@
-﻿using OpenMacroBoard.SDK;
+using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -350,9 +350,9 @@ namespace CodeDeck
             _streamDeck.SetKeyBitmap(keyWrapper.Key.Index,
                 KeyBitmap.Create.FromImageSharpImage(
                     CreateTileBitmap(
-                        keyWrapper.Tile?.Text ?? keyWrapper.Key.Text,
-                        keyWrapper.Tile?.Font,
-                        keyWrapper.Tile?.FontSize,
+                        keyWrapper.Key.Text ?? keyWrapper.Tile?.Text,
+                        keyWrapper.Tile?.Font ?? keyWrapper.Key.Font,
+                        keyWrapper.Tile?.FontSize ?? keyWrapper.Key.FontSize,
                         keyWrapper.Tile?.TextColor ?? keyWrapper.Key.TextColorAsColor,
                         keyWrapper.Tile?.BackgroundColor ?? keyWrapper.Key.BackgroundColorAsColor,
                         keyWrapper.Image ?? keyWrapper.Tile?.Image,

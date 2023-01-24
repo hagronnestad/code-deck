@@ -51,10 +51,6 @@ namespace CodeDeck
             }
 
             Tile.NotifyChange = NotifyChange_Action;
-            Tile.Text = Key.Text;
-            Tile.Font = Key.Font;
-            Tile.FontSize = Key.FontSize;
-            Tile.ImagePadding = Key.ImagePadding;
 
             try
             {
