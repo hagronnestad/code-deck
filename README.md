@@ -89,31 +89,33 @@ Windows users may use `CodeDeck.Windows.exe` which adds an icon to the notificat
 
 Plugins are located in the `Plugins`-directory. All plugins are coded in `C#` and gets compiled on startup using `Roslyn`. All the *"built in"* plugins work in the same way and their `C#`-scripts are available in the same `Plugins`-directory.
 
+Documentation for each plugin can be found as a markdown file in each plugins directory. The below table links directly to each plugins documentation.
+
 ### List Of Built In Plugins & Tiles
 
-| Name                | Tile                                                        | OS Support | Description |
-| ------------------- | ----------------------------------------------------------- | ---------- | ----------- |
-| AudioDeviceSwitcher | AudioDeviceSwitcherTile                                     | 🪟          |             |
-| Clock               | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md) | 🪟🐧         |             |
-| Counter             | CounterTile                                                 | 🪟🐧         |             |
-| Lock                | LockTile                                                    | 🪟          |             |
-| MediaKeys           | MuteTile                                                    | 🪟          |             |
-|                     | VolumeDownTile                                              | 🪟          |             |
-|                     | VolumeUpTile                                                | 🪟          |             |
-|                     | NextTrackTile                                               | 🪟          |             |
-|                     | PreviousTrackTile                                           | 🪟          |             |
-|                     | StopTile                                                    | 🪟          |             |
-|                     | PlayPauseTile                                               | 🪟          |             |
-| PerformanceCounters | CpuUsageTile                                                | 🪟          |             |
-|                     | MemoryUsageTile                                             | 🪟          |             |
-|                     | GpuUsageTile                                                | 🪟          |             |
-| Runner              | RunTile                                                     | 🪟🐧         |             |
-|                     | OpenWebsiteTile                                             | 🪟🐧         |             |
-| Template            | TemplateTileOne                                             | 🪟🐧         |             |
-|                     | TemplateTileTwo                                             | 🪟🐧         |             |
-| KeyboardSimulator   | TyperTile                                                   | 🪟          |             |
-|                     | HotkeyTile                                                  | 🪟          |             |
-| WebRequest          | PlainTextTile                                               | 🪟🐧         |             |
+| Name                | Tile                                                                         | OS Support | Description |
+| ------------------- | ---------------------------------------------------------------------------- | ---------- | ----------- |
+| AudioDeviceSwitcher | AudioDeviceSwitcherTile                                                      | 🪟          |             |
+| Clock               | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md)                  | 🪟🐧         |             |
+| Counter             | [CounterTile](CodeDeck.Plugins/Plugins/Counter/Counter.md)                   | 🪟🐧         |             |
+| Lock                | [LockTile](CodeDeck.Plugins/Plugins/Lock/Lock.md)                            | 🪟          |             |
+| MediaKeys           | MuteTile                                                                     | 🪟          |             |
+|                     | VolumeDownTile                                                               | 🪟          |             |
+|                     | VolumeUpTile                                                                 | 🪟          |             |
+|                     | NextTrackTile                                                                | 🪟          |             |
+|                     | PreviousTrackTile                                                            | 🪟          |             |
+|                     | StopTile                                                                     | 🪟          |             |
+|                     | PlayPauseTile                                                                | 🪟          |             |
+| PerformanceCounters | CpuUsageTile                                                                 | 🪟          |             |
+|                     | MemoryUsageTile                                                              | 🪟          |             |
+|                     | GpuUsageTile                                                                 | 🪟          |             |
+| Runner              | [RunTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#runtile)                 | 🪟🐧         |             |
+|                     | [OpenWebsiteTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#openwebsitetile) | 🪟🐧         |             |
+| Template            | TemplateTileOne                                                              | 🪟🐧         |             |
+|                     | TemplateTileTwo                                                              | 🪟🐧         |             |
+| KeyboardSimulator   | TyperTile                                                                    | 🪟          |             |
+|                     | HotkeyTile                                                                   | 🪟          |             |
+| WebRequest          | PlainTextTile                                                                | 🪟🐧         |             |
 
 
 ### Plugin Development
