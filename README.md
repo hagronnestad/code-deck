@@ -153,11 +153,11 @@ Full path to configuration file:
 }
 ```
 
-| Field       | Values                      | Description                 |
-| ----------- | --------------------------- | --------------------------- |
-| ProfileType | `"Normal" \| "LockScreen"*` | Profile type.               |
-| Name        | `DefaultProfile`            | Name of the profile.        |
-| Pages       | `Page[]`                    | An array of `Page` objects. |
+| Field       | Values                        | Description                 |
+| ----------- | ----------------------------- | --------------------------- |
+| ProfileType | `"Normal"` \| `"LockScreen"*` | Profile type.               |
+| Name        | `DefaultProfile`              | Name of the profile.        |
+| Pages       | `Page[]`                      | An array of `Page` objects. |
 
 `*"LockScreen"` is only supported on Windows for now. If a profile of this type exists, **Code Deck** will automatically change to that profile when the computer is locked.
 
