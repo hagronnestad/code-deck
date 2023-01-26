@@ -28,7 +28,7 @@
 
 ## Description
 
-**Code Deck** is an open source alternative to the official Stream Deck application.
+**Code Deck** is a cross platform and open source alternative to the official Stream Deck application.
 
 The `Code`-part of the name is a reference to how configuration and plugins work in **Code Deck**. The configuration is done using `JSON` and all plugins are `C#`-scripts.
 
