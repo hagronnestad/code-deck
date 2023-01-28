@@ -62,7 +62,7 @@ public class KeyboardSimulator : CodeDeckPlugin
             return base.Init(cancellationToken);
         }
 
-        public override Task OnTilePressDown(CancellationToken cancellationToken)
+        public override Task OnTilePressUp(CancellationToken cancellationToken)
         {
             if (_modifiers is not null && _keys is not null)
             {

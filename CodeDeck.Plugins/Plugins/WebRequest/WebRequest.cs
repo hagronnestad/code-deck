@@ -24,7 +24,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                 await Task.CompletedTask;
             }
 
-            public override async Task OnTilePressDown(CancellationToken cancellationToken)
+            public override async Task OnTilePressUp(CancellationToken cancellationToken)
             {
                 await GetAsync(cancellationToken);
             }

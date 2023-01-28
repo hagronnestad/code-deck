@@ -1,4 +1,4 @@
-﻿using CodeDeck.PluginAbstractions;
+using CodeDeck.PluginAbstractions;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +18,7 @@ public class Lock : CodeDeckPlugin
             return base.Init(cancellationToken);
         }
 
-        public override Task OnTilePressDown(CancellationToken cancellationToken)
+        public override Task OnTilePressUp(CancellationToken cancellationToken)
         {
             LockWorkStation();
             return base.OnTilePressDown(cancellationToken);

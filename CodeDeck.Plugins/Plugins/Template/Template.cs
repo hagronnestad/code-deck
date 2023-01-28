@@ -71,8 +71,6 @@ public class Template : CodeDeckPlugin
         /// <param name="cancellationToken"></param>
         public override Task OnTilePressDown(CancellationToken cancellationToken)
         {
-            Counter++;
-            Text = $"TileOne\n{_dateTimeNow.ToShortTimeString()}\n{Counter}";
             return base.OnTilePressDown(cancellationToken);
         }
 
@@ -83,6 +81,8 @@ public class Template : CodeDeckPlugin
         /// <param name="cancellationToken"></param>
         public override Task OnTilePressUp(CancellationToken cancellationToken)
         {
+            Counter++;
+            Text = $"TileOne\n{_dateTimeNow.ToShortTimeString()}\n{Counter}";
             return base.OnTilePressUp(cancellationToken);
         }
 
