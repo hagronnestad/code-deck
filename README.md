@@ -17,6 +17,10 @@
       - [Profile](#profile-1)
       - [Page](#page-1)
       - [Key](#key-1)
+  - [Image, Icons \& Emojis](#image-icons--emojis)
+    - [Image](#image)
+    - [Emojis](#emojis)
+    - [Icon Fonts](#icon-fonts)
   - [Plugins](#plugins)
     - [List Of Built In Plugins \& Tiles](#list-of-built-in-plugins--tiles)
     - [Plugin Development](#plugin-development)
@@ -223,6 +227,49 @@ Full path to configuration file:
 | Settings               | `{ "Key": "Value", ... }`          | A key/value dictionary containing the settings needed to configure the `Tile`. All values ***MUST*** be `string`s.                                    |
 
 All fields are optional except for `Index`.
+
+
+## Image, Icons & Emojis
+
+### Image
+The `Key.Image` field can be set to the path of an image file. The image will be drawn to key. Supported formats are listed [here](https://docs.sixlabors.com/articles/imagesharp/imageformats.html).
+
+
+### Emojis
+As an alternative to supplying an image, you can use emojis. Use the `Text` field to specify one or more emojis. To use emojis, you have to specify a font that supports them. On Windows you can set the `Font` field to [`Segoe UI Emoji`](https://learn.microsoft.com/en-us/typography/font-list/segoe-ui-emoji).
+
+You can also use other third party emoji fonts.
+
+Adjust the `FontSize` field for a bigger *"icon"*.
+
+Example:
+```json
+{
+  "Text": "🔒",
+  "Font": "Segoe UI Emoji",
+  "FontSize": 50
+}
+```
+
+### Icon Fonts
+
+[`Segoe Fluent Icons`](https://learn.microsoft.com/en-us/windows/apps/design/style/segoe-fluent-icons-font) is another option on Windows.
+
+This font contains a ***lot*** of glyphs. These glyphs can be combined with the `TextColor` field like a normal font.
+
+There are multiple third party icon fonts that should work in the same way.
+
+All glyphs and their unicode value is listed [here](https://learn.microsoft.com/en-us/windows/apps/design/style/segoe-fluent-icons-font). Prefix the unicode value with `\u` in the `JSON`-configuration.
+
+Example:
+```json
+{
+  "Text": "\ue72e",
+  "TextColor": "#ff0000",
+  "Font": "Segoe Fluent Icons",
+  "FontSize": 50
+}
+```
 
 
 ## Plugins
