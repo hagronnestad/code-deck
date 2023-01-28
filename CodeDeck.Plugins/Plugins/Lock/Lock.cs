@@ -1,4 +1,4 @@
-using CodeDeck.PluginAbstractions;
+﻿using CodeDeck.PluginAbstractions;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +14,8 @@ public class Lock : CodeDeckPlugin
 
         public override Task Init(CancellationToken cancellationToken)
         {
-            Text = "Lock\nPC";
+            Text = "🔒";
+            FontSize = 50;
             return base.Init(cancellationToken);
         }
 
