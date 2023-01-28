@@ -342,60 +342,56 @@ namespace CodeDeck
         public void UpdateKeyBitmap(KeyWrapper keyWrapper)
         {
             _streamDeck.SetKeyBitmap(keyWrapper.Key.Index,
-                KeyBitmap.Create.FromImageSharpImage(
-                    CreateTileBitmap(
-                        keyWrapper.Key.Text ?? keyWrapper.Tile?.Text,
-                        keyWrapper.Tile?.Font ?? keyWrapper.Key.Font,
-                        keyWrapper.Tile?.FontSize ?? keyWrapper.Key.FontSize,
-                        keyWrapper.Tile?.TextColor ?? keyWrapper.Key.TextColorAsColor,
-                        keyWrapper.Tile?.BackgroundColor ?? keyWrapper.Key.BackgroundColorAsColor,
-                        keyWrapper.Image ?? keyWrapper.Tile?.Image,
-                        keyWrapper.Tile?.ImagePadding ?? keyWrapper.Key.ImagePadding,
-                        keyWrapper.Tile?.ShowIndicator,
-                        keyWrapper.Tile?.IndicatorColor ?? keyWrapper.Key.ActivityIndicatorColorAsColor,
-                        keyWrapper.Key.ShowFolderIndicator ??
-                            (keyWrapper.Key.KeyType == Key.KEY_TYPE_GOTO_PAGE ? true : false),
-                        keyWrapper.Key.FolderIndicatorColorAsColor ?? Color.Blue
-                    )));
+                KeyBitmap.Create.FromImageSharpImage(CreateTileBitmap(keyWrapper)));
         }
 
-        private Image CreateTileBitmap(
-            string? text,
-            string? font = null,
-            float? fontSize = null,
-            Color? textColor = null,
-            Color? bgColor = null,
-            Image? image = null,
-            int? imagePadding = null,
-            bool? indicator = null,
-            Color? indicatorColor = null,
-            bool? folderIndicator = null,
-            Color? folderIndicatorColor = null
-        )
+        private Image CreateTileBitmap(KeyWrapper keyWrapper)
         {
+            // TODO: This method is a mess and should be massively optimized
+            // - KeyWrapper should cache the key image and use the cached version on page refresh
+            // - The created bitmap object (`i`) should probably be reused when redrawing
+            // - Fonts should not be recreated on every draw
+
+            // Get customized values, Key (set by user) values override Tile values, set default value if needed
+            string? text = keyWrapper.Key.Text ?? keyWrapper.Tile?.Text;
+            string? font = keyWrapper.Key.Font ?? keyWrapper.Tile?.Font ?? "Ubuntu";
+            bool fontBold = keyWrapper.Key.FontBold ?? false;
+            bool fontItalic = keyWrapper.Key.FontItalic ?? false;
+            float fontSize = keyWrapper.Key.FontSize ?? keyWrapper.Tile?.FontSize ?? 16.0f;
+            float lineSpacing = keyWrapper.Key.LineSpacing ?? 1.0f;
+            Color textColor = keyWrapper.Key.TextColorAsColor ?? keyWrapper.Tile?.TextColor ?? Color.White;
+            Color bgColor = keyWrapper.Key.BackgroundColorAsColor ?? keyWrapper.Tile?.BackgroundColor ?? Color.Transparent;
+            Image? image = keyWrapper.Image ?? keyWrapper.Tile?.Image;
+            int imagePadding = keyWrapper.Key.ImagePadding ?? keyWrapper.Tile?.ImagePadding ?? 0;
+            bool? indicator = keyWrapper.Tile?.ShowIndicator;
+            Color indicatorColor = keyWrapper.Key.ActivityIndicatorColorAsColor ?? keyWrapper.Tile?.IndicatorColor ?? Color.Yellow;
+            bool? folderIndicator = keyWrapper.Key.ShowFolderIndicator ?? (keyWrapper.Key.KeyType == Key.KEY_TYPE_GOTO_PAGE);
+            Color folderIndicatorColor = keyWrapper.Key.FolderIndicatorColorAsColor ?? Color.Blue;
+
+            // Create key bitmap
             var i = new Image<Rgba32>(_streamDeck.Keys.KeySize, _streamDeck.Keys.KeySize);
 
             // Add background color
-            i.Mutate(x => x.BackgroundColor(bgColor ?? Color.Transparent));
+            i.Mutate(x => x.BackgroundColor(bgColor));
 
             // Add image
             if (image != null)
             {
-                int padding = imagePadding ?? 0;
-
-                image.Mutate(i => i.Resize(_streamDeck.Keys.KeySize - (padding * 2),
-                    _streamDeck.Keys.KeySize - (padding * 2)));
-                i.Mutate(x => x.DrawImage(image, new Point(padding, padding), 1f));
+                image.Mutate(i => i.Resize(_streamDeck.Keys.KeySize - (imagePadding * 2),
+                    _streamDeck.Keys.KeySize - (imagePadding * 2)));
+                i.Mutate(x => x.DrawImage(image, new Point(imagePadding, imagePadding), 1f));
             }
 
             // Add text
             if (text != null && !string.IsNullOrWhiteSpace(text))
             {
-                if (_fontCollection.TryGet(font ?? "Ubuntu", out var fontFamily))
+                if (_fontCollection.TryGet(font, out var fontFamily))
                 {
-                    var f = fontFamily.CreateFont(fontSize ?? 16, FontStyle.Bold);
+                    var fontStyle = FontStyle.Regular;
+                    if (fontBold) fontStyle |= FontStyle.Bold;
+                    if (fontItalic) fontStyle |= FontStyle.Italic;
 
-                    var size = TextMeasurer.Measure(text, new TextOptions(f));
+                    var f = fontFamily.CreateFont(fontSize, fontStyle);
 
                     var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
                     var textOptions = new TextOptions(f)
@@ -404,22 +400,31 @@ namespace CodeDeck
                         HorizontalAlignment = HorizontalAlignment.Center,
                         VerticalAlignment = VerticalAlignment.Center,
                         TextAlignment = TextAlignment.Center,
+                        LineSpacing = lineSpacing
                     };
-                    i.Mutate(x => x.DrawText(textOptions, text, textColor ?? Color.White));
+
+                    if (_configuration.FallbackFont is not null &&
+                        _fontCollection.TryGet(_configuration.FallbackFont, out var fallBackFontFamily))
+                    {
+                        textOptions.FallbackFontFamilies = new[] { fallBackFontFamily };
+                    }
+
+                    i.Mutate(x => x.DrawText(textOptions, text, textColor));
                 }
             }
 
             // Add indicator
             if (indicator.HasValue && indicator.Value)
             {
-                i.Mutate(x => x.Fill(indicatorColor ?? Color.Yellow, new EllipsePolygon(_streamDeck.Keys.KeySize - 7, 7, 3)));
+                i.Mutate(x => x.Fill(indicatorColor, new EllipsePolygon(_streamDeck.Keys.KeySize - 7, 7, 3)));
             }
 
             // Add folder indicator
             if (folderIndicator.HasValue && folderIndicator.Value)
             {
                 var lineHeight = 5;
-                i.Mutate(x => x.Fill(folderIndicatorColor ?? Color.Azure, new Rectangle(0, _streamDeck.Keys.KeySize - lineHeight, _streamDeck.Keys.KeySize, lineHeight)));
+                i.Mutate(x => x.Fill(folderIndicatorColor,
+                    new Rectangle(0, _streamDeck.Keys.KeySize - lineHeight, _streamDeck.Keys.KeySize, lineHeight)));
             }
 
             return i;

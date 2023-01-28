@@ -25,10 +25,13 @@ namespace CodeDeck.Models.Configuration
         /// </summary>
         public string? Text { get; set; }
         public string? TextColor { get; set; }
-        public string? BackgroundColor { get; set; }
+        public float? LineSpacing { get; set; }
         public string? Font { get; set; }
         public float? FontSize { get; set; }
+        public bool? FontBold { get; set; }
+        public bool? FontItalic { get; set; }
 
+        public string? BackgroundColor { get; set; }
         public string? Image { get; set; }
         public int? ImagePadding { get; set; }
 

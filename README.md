@@ -134,17 +134,19 @@ Full path to configuration file:
 
 ```json
 {
-  "Brightness": 100,
   "DevicePath": null,
+  "Brightness": 100,
+  "FallbackFont": "Segoe UI Emoji",
   "Profiles": []
 }
 ```
 
-| Field      | Values      | Description                                                                       |
-| ---------- | ----------- | --------------------------------------------------------------------------------- |
-| Brightness | `100`       | Brightness in percent.                                                            |
-| DevicePath | `null`      | Path to a specific device, can be used in the case of multiple connected devices. |
-| Profiles   | `Profile[]` | An array of `Profile` objects.                                                    |
+| Field        | Values           | Description                                                                                                              |
+| ------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| DevicePath   | `null`           | Path to a specific device, can be used in the case of multiple connected devices.                                        |
+| Brightness   | `100`            | Brightness in percent.                                                                                                   |
+| FallbackFont | `Segoe UI Emoji` | Font to use if a glyph is not available in the `Key`-font. Set this to an emoji or icon font to easily use icons/emojis. |
+| Profiles     | `Profile[]`      | An array of `Profile` objects.                                                                                           |
 
 
 #### Profile
@@ -212,6 +214,9 @@ Full path to configuration file:
 | Text                   | `"Some Text"`                      | The text to show on the key. Text is always centered. Use `\n` for multiple lines.                                                                    |
 | Font                   | `"Font Name"`                      | Name of the font to use for the `Text`.                                                                                                               |
 | FontSize               | `10`                               | Size of the `Font`.                                                                                                                                   |
+| FontBold               | `true` \| `false`                  |                                                                                                                                                       |
+| FontItalic             | `true` \| `false`                  |                                                                                                                                                       |
+| LineSpacing            | `1.0`                              | Spacing between lines. Value is in percent of the line height. `1.1` means the spacing is 10% more than the line height.                              |
 | TextColor              | `"#ffffff"`                        | Color of the `Text`.                                                                                                                                  |
 | BackgroundColor        | `"#000000"`                        | Color of the background color of the key.                                                                                                             |
 | Image                  | `filename.png`                     | Path to an image file. The image will be shown on the key.                                                                                            |
