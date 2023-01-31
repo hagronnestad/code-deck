@@ -26,6 +26,9 @@
     <Compile Update="Plugins\Clock\Clock.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
+    <Compile Update="Plugins\CounterStrikeGlobalOffensiveNetCon\CounterStrikeGlobalOffensiveNetCon.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
     <Compile Update="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
