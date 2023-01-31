@@ -268,7 +268,7 @@ namespace CodeDeck
         {
             if (_navigationStack.Count < 2) return;
             _navigationStack.Pop();
-            var (profileName, pageName) = _navigationStack.Peek();
+            var (profileName, pageName) = _navigationStack.Pop();
             GotoPage(profileName, pageName);
         }
 
