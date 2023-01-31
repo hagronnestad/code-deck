@@ -70,6 +70,13 @@ namespace CodeDeck.PluginSystem
                             p.SetValue(tileInstance, parsedValue);
                         }
                     }
+                    else if (p.PropertyType == typeof(double?) || p.PropertyType == typeof(double))
+                    {
+                        if (double.TryParse(value, out var parsedValue))
+                        {
+                            p.SetValue(tileInstance, parsedValue);
+                        }
+                    }
                     else
                     {
                         p.SetValue(tileInstance, value);
