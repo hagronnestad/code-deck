@@ -20,18 +20,14 @@ namespace CodeDeck
 {
     public class StreamDeckManager
     {
-        private IMacroBoard _streamDeck;
-        private readonly FontCollection _fontCollection = new();
-
         private readonly ILogger<StreamDeckManager> _logger;
         private readonly ConfigurationProvider _configurationProvider;
         public StreamDeckConfiguration _configuration;
+        private readonly IMacroBoard? _streamDeck;
         private readonly PluginLoader _pluginLoader;
-
-        public List<KeyWrapper> KeyWrappers { get; set; } = new();
-
+        private readonly List<KeyWrapper> _keyWrappers = new();
+        private readonly FontCollection _fontCollection = new();
         private readonly Stack<(string profileName, string pageName)> _navigationStack = new();
-
         private bool _applyingConfiguration = false;
 
 
@@ -42,11 +38,10 @@ namespace CodeDeck
         )
         {
             _logger = logger;
-
             _configurationProvider = configurationProvider;
             _pluginLoader = pluginLoader;
-
             _configuration = _configurationProvider.LoadConfiguration();
+            
             _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
 
             _fontCollection.AddSystemFonts();
@@ -59,11 +54,16 @@ namespace CodeDeck
             _fontCollection.Add("Fonts/Ubuntu-MediumItalic.ttf");
             _fontCollection.Add("Fonts/Ubuntu-Regular.ttf");
 
-            if (!OpenStreamDeck())
+            _streamDeck = OpenStreamDeck();
+
+            if (_streamDeck is null)
             {
                 _logger.LogError($"{nameof(OpenStreamDeck)} failed!");
                 Environment.Exit(1);
             }
+
+            _streamDeck.ConnectionStateChanged += StreamDeck_ConnectionStateChanged;
+            _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
 
             // Handle Lock/UnLock on Windows
             if (OperatingSystem.IsWindows())
@@ -72,15 +72,17 @@ namespace CodeDeck
             }
         }
 
-        private bool OpenStreamDeck()
+        private IMacroBoard? OpenStreamDeck()
         {
+            IMacroBoard? streamDeck;
+
             try
             {
                 var availableDevices = StreamDeck.EnumerateDevices();
                 if (availableDevices is null)
                 {
                     _logger.LogError("No Stream Deck hardware found!");
-                    return false;
+                    return null;
                 }
 
                 // Log all available devices
@@ -93,24 +95,69 @@ namespace CodeDeck
                 // Open specified or default device
                 if (_configuration.DevicePath is not null)
                 {
-                    _streamDeck = StreamDeck.OpenDevice(_configuration.DevicePath).WithButtonPressEffect();
+                    streamDeck = StreamDeck.OpenDevice(_configuration.DevicePath).WithButtonPressEffect();
                 }
                 else
                 {
-                    _streamDeck = StreamDeck.OpenDevice().WithButtonPressEffect();
+                    streamDeck = StreamDeck.OpenDevice().WithButtonPressEffect();
                 }
 
-                _streamDeck.ClearKeys();
-                _streamDeck.SetBrightness((byte)_configuration.Brightness);
-                _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
+                streamDeck.ClearKeys();
+                streamDeck.SetBrightness((byte)_configuration.Brightness);
             }
             catch (Exception e)
             {
                 _logger.LogError($"Exception in '{nameof(ApplyConfigurationAsync)}'. Message: '{e.Message}'. This may indicate that an invalid '{nameof(StreamDeckConfiguration.DevicePath)}' was specified.");
-                return false;
+                return null;
             }
 
-            return true;
+            return streamDeck;
+        }
+
+        private void StreamDeck_ConnectionStateChanged(object? sender, ConnectionEventArgs e)
+        {
+            if (_streamDeck is null) return;
+            _streamDeck.ClearKeys();
+            _streamDeck.SetBrightness((byte)_configuration.Brightness);
+            RefreshPage();
+        }
+
+        private void StreamDeck_KeyStateChanged(object? sender, KeyEventArgs e)
+        {
+            if (_navigationStack.Count == 0) return;
+            var (profileName, pageName) = _navigationStack.Peek();
+
+            var keyWrapper = _keyWrappers
+                .Where(x => x.Profile.Name == profileName)
+                .Where(x => x.Page.Name == pageName)
+                .Where(x => x.Key.Index == e.Key)
+                .FirstOrDefault();
+
+            if (keyWrapper == null) return;
+
+            switch (keyWrapper.Key.KeyType)
+            {
+                case Key.KEY_TYPE_GOTO_PAGE:
+                    if (!e.IsDown)
+                    {
+                        if (keyWrapper.Key.Profile == null || keyWrapper.Key.Page == null) return;
+                        GotoPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
+                        break;
+                    }
+                    break;
+
+                case Key.KEY_TYPE_GO_BACK:
+                    if (!e.IsDown) GotoPreviousPage();
+                    break;
+
+                case Key.KEY_TYPE_NORMAL:
+                    if (e.IsDown) keyWrapper.HandleKeyPressDown();
+                    if (!e.IsDown) keyWrapper.HandleKeyPressUp();
+                    break;
+
+                default:
+                    break;
+            }
         }
 
         /// <summary>
@@ -162,11 +209,11 @@ namespace CodeDeck
             _configuration = _configurationProvider.LoadConfiguration();
 
             // DeInit all Tiles
-            KeyWrappers.ForEach(x => x.CancellationTokenSource.Cancel());
-            await Task.WhenAll(KeyWrappers
+            _keyWrappers.ForEach(x => x.CancellationTokenSource.Cancel());
+            await Task.WhenAll(_keyWrappers
                 .Where(x => x.Plugin != null)
                 .Select(x => x.Tile?.DeInit() ?? Task.CompletedTask));
-            KeyWrappers.Clear();
+            _keyWrappers.Clear();
 
             // Apply new configuration and refresh current page
             await ApplyConfigurationAsync();
@@ -222,20 +269,20 @@ namespace CodeDeck
                     }
                 }
 
-                KeyWrappers.Add(keyWrapper);
+                _keyWrappers.Add(keyWrapper);
             }
 
-            await Task.WhenAll(KeyWrappers
+            await Task.WhenAll(_keyWrappers
                 .Where(x => x.Plugin != null)
                 .Select(x => x.InstantiateTileObjectAsync()));
         }
 
         public void RemoveKeyWrapper()
         {
-            foreach (var keyWrapper in KeyWrappers)
+            foreach (var keyWrapper in _keyWrappers)
             {
                 keyWrapper.Updated -= KeyWrapper_Updated;
-                KeyWrappers.Remove(keyWrapper);
+                _keyWrappers.Remove(keyWrapper);
             }
         }
 
@@ -256,7 +303,7 @@ namespace CodeDeck
             _streamDeck.ClearKeys();
             var (profileName, pageName) = _navigationStack.Peek();
 
-            foreach (var keyWrapper in KeyWrappers
+            foreach (var keyWrapper in _keyWrappers
                 .Where(x => x.Profile.Name == profileName)
                 .Where(x => x.Page.Name == pageName))
             {
@@ -270,54 +317,6 @@ namespace CodeDeck
             _navigationStack.Pop();
             var (profileName, pageName) = _navigationStack.Pop();
             GotoPage(profileName, pageName);
-        }
-
-        private void StreamDeck_KeyStateChanged(object? sender, KeyEventArgs e)
-        {
-            if (_navigationStack.Count == 0) return;
-            var (profileName, pageName) = _navigationStack.Peek();
-
-            var keyWrapper = KeyWrappers
-                .Where(x => x.Profile.Name == profileName)
-                .Where(x => x.Page.Name == pageName)
-                .Where(x => x.Key.Index == e.Key)
-                .FirstOrDefault();
-
-            if (keyWrapper == null) return;
-
-            if (e.IsDown)
-            {
-                switch (keyWrapper.Key.KeyType)
-                {
-                    case Key.KEY_TYPE_GOTO_PAGE:
-                        break;
-
-                    case Key.KEY_TYPE_GO_BACK:
-                        break;
-
-                    case Key.KEY_TYPE_NORMAL:
-                        keyWrapper.HandleKeyPressDown();
-                        break;
-                }
-            }
-            else
-            {
-                switch (keyWrapper.Key.KeyType)
-                {
-                    case Key.KEY_TYPE_GOTO_PAGE:
-                        if (keyWrapper.Key.Profile == null || keyWrapper.Key.Page == null) return;
-                        GotoPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
-                        break;
-
-                    case Key.KEY_TYPE_GO_BACK:
-                        GotoPreviousPage();
-                        break;
-
-                    case Key.KEY_TYPE_NORMAL:
-                        keyWrapper.HandleKeyPressUp();
-                        break;
-                }
-            }
         }
 
         /// <summary>
