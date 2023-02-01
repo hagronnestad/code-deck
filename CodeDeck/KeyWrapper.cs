@@ -4,7 +4,6 @@ using CodeDeck.PluginSystem;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,7 +17,7 @@ namespace CodeDeck
         public Page Page { get; set; }
         public Key Key { get; set; }
 
-        public LoadedPlugin? Plugin { get; set; }
+        public Plugin? Plugin { get; set; }
         public Tile? Tile { get; set; }
         public CancellationTokenSource CancellationTokenSource { get; } = new();
 
@@ -26,7 +25,7 @@ namespace CodeDeck
 
         public event EventHandler<KeyWrapper>? Updated;
 
-        public KeyWrapper(ILogger logger, Profile profile, Page page, Key key, LoadedPlugin? plugin)
+        public KeyWrapper(ILogger logger, Profile profile, Page page, Key key, Plugin? plugin)
         {
             _logger = logger;
 
@@ -38,22 +37,15 @@ namespace CodeDeck
 
         public async Task InstantiateTileObjectAsync()
         {
-            if (Plugin is null || Key.Tile is null)
-            {
-                return;
-            }
-
-            Tile = Plugin.CreateTileInstance(Key.Tile, Key.Settings);
-
-            if (Tile is null)
-            {
-                return;
-            }
-
-            Tile.NotifyChange = NotifyChange_Action;
+            if (Plugin is null || Key.Tile is null) return;
 
             try
             {
+                Tile = Plugin.CreateTileInstance(Key.Tile, Key.Settings);
+                if (Tile is null) return;
+
+                Tile.NotifyChange = NotifyChange_Action;
+
                 await Tile.Init(CancellationTokenSource.Token);
             }
             catch (Exception e)
@@ -77,7 +69,7 @@ namespace CodeDeck
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"Tile.OnTilePressDown(): {e.Message}");
+                _logger.LogDebug($"<{nameof(Tile.OnTilePressDown)}>: {e.Message}");
             }
         }
 
@@ -91,7 +83,7 @@ namespace CodeDeck
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"Tile.OnTilePressUp(): {e.Message}");
+                _logger.LogDebug($"<{nameof(Tile.OnTilePressUp)}>: {e.Message}");
             }
         }
     }

@@ -1,4 +1,4 @@
-using OpenMacroBoard.SDK;
+﻿using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -41,7 +41,7 @@ namespace CodeDeck
             _configurationProvider = configurationProvider;
             _pluginLoader = pluginLoader;
             _configuration = _configurationProvider.LoadConfiguration();
-            
+
             _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
 
             _fontCollection.AddSystemFonts();
@@ -253,33 +253,35 @@ namespace CodeDeck
 
         public async Task CreateKeyWrappers()
         {
-            foreach (var keyWrapper in from profile in _configuration.Profiles
-                                       from page in profile.Pages
-                                       from key in page.Keys
-                                       let plugin = _pluginLoader.LoadedPlugins.FirstOrDefault(x => x.Name == key.Plugin)
-                                       let keyWrapper = new KeyWrapper(_logger, profile, page, key, plugin)
-                                       select keyWrapper)
+            // Instantiate all wrappers based on configuration
+            var keyWrappers = (from profile in _configuration.Profiles
+                               from page in profile.Pages
+                               from key in page.Keys
+                               let plugin = _pluginLoader.LoadedPlugins.FirstOrDefault(x => x.Name == key.Plugin)
+                               let keyWrapper = new KeyWrapper(_logger, profile, page, key, plugin)
+                               orderby keyWrapper.Key.Index
+                               select keyWrapper)
+                               .ToList();
+
+            // Try to load the image specified for a key
+            // This must be done here because not all keys are associated with a tile
+            keyWrappers.ForEach(x =>
             {
-                keyWrapper.Updated += KeyWrapper_Updated;
+                if (x.Key.Image != null) x.Image = SafeLoadImage(x.Key.Image, true);
+            });
 
-                if (keyWrapper.Key.Image != null)
-                {
-                    try
-                    {
-                        keyWrapper.Image = Image.Load(keyWrapper.Key.Image);
-                    }
-                    catch (Exception)
-                    {
-                        keyWrapper.Image = Image.Load("Images/icon.png");
-                    }
-                }
-
-                _keyWrappers.Add(keyWrapper);
-            }
-
-            await Task.WhenAll(_keyWrappers
+            // Instantiate all tiles in parallell and wait for all to finish
+            await Task.WhenAll(keyWrappers
                 .Where(x => x.Plugin != null)
                 .Select(x => x.InstantiateTileObjectAsync()));
+
+            // Bind all event handlers last to prevent unnecessary
+            // key updates during init and draw all keys at the same time
+            keyWrappers.ForEach(x => x.Updated += KeyWrapper_Updated);
+            RefreshPage();
+
+            // Keep wrappers for later
+            _keyWrappers.AddRange(keyWrappers);
         }
 
         public void RemoveKeyWrapper()
@@ -289,6 +291,28 @@ namespace CodeDeck
                 keyWrapper.Updated -= KeyWrapper_Updated;
                 _keyWrappers.Remove(keyWrapper);
             }
+        }
+
+        /// <summary>
+        /// Safely (without exceptions) load an image or a default placeholder
+        /// if the image file does not exist or can't be loaded for some reason.
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="usePlaceholder"></param>
+        /// <returns></returns>
+        private Image? SafeLoadImage(string fileName, bool usePlaceholder = false)
+        {
+            try
+            {
+                return Image.Load(fileName);
+            }
+            catch (Exception)
+            {
+                _logger.LogWarning($"<{nameof(SafeLoadImage)}>: tried to load image: '{fileName}'");
+                if (usePlaceholder) return Image.Load("Images/icon.png");
+            }
+
+            return null;
         }
 
         public void GotoPage(string profileName, string pageName)
@@ -345,7 +369,7 @@ namespace CodeDeck
 
         public void UpdateKeyBitmap(KeyWrapper keyWrapper)
         {
-            _streamDeck.SetKeyBitmap(keyWrapper.Key.Index,
+            _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index,
                 KeyBitmap.Create.FromImageSharpImage(CreateTileBitmap(keyWrapper)));
         }
 
