@@ -1,4 +1,4 @@
-﻿using OpenMacroBoard.SDK;
+using OpenMacroBoard.SDK;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -223,6 +223,11 @@ namespace CodeDeck
 
         public async Task ApplyConfigurationAsync()
         {
+            ClearKeys();
+
+            _streamDeck?.SetKeyBitmap(_streamDeck.Keys.CountX / 2,
+                KeyBitmap.Create.FromImageSharpImage(Image.Load("Images/icon.png")));
+
             var profile = _configuration.Profiles
                 .FirstOrDefault(x => x.ProfileType == Profile.PROFILE_TYPE_NORMAL);
 
