@@ -82,6 +82,7 @@ namespace CodeDeck
                 var configuration = JsonSerializer.Deserialize<StreamDeckConfiguration>(json, new JsonSerializerOptions()
                 {
                     AllowTrailingCommas = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip
                 });
 
                 if (configuration is not null) return configuration;
