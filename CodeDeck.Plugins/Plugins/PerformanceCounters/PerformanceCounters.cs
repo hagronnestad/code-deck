@@ -13,6 +13,8 @@ public class PerformanceCounters : CodeDeckPlugin
 {
     public class CpuUsageTile : Tile
     {
+        [Setting] public string? Format { get; set; }
+
         private PerformanceCounter _cpuUsageCounter = new("Processor Information", "% Processor Utility", "_Total");
 
         public override async Task Init(CancellationToken cancellationToken)
@@ -31,7 +33,7 @@ public class PerformanceCounters : CodeDeckPlugin
                 }
 
                 var cpuUsage = (int)_cpuUsageCounter.NextValue();
-                Text = $"CPU\n{cpuUsage} %";
+                Text = string.Format(Format ?? "CPU\n{0} %", cpuUsage);
                 await Task.Delay(1000, cancellationToken);
             }
         }
@@ -39,6 +41,8 @@ public class PerformanceCounters : CodeDeckPlugin
 
     public class MemoryUsageTile : Tile
     {
+        [Setting] public string? Format { get; set; }
+
         private PerformanceCounter _memUsageCounter = new("Memory", "% Committed Bytes In Use");
 
         public override async Task Init(CancellationToken cancellationToken)
@@ -57,7 +61,7 @@ public class PerformanceCounters : CodeDeckPlugin
                 }
 
                 var memUsage = (int)_memUsageCounter.NextValue();
-                Text = $"RAM\n{memUsage} %";
+                Text = string.Format(Format ?? "RAM\n{0} %", memUsage);
                 await Task.Delay(1000, cancellationToken);
             }
         }
@@ -69,6 +73,8 @@ public class PerformanceCounters : CodeDeckPlugin
     /// </summary>
     public class GpuUsageTile : Tile
     {
+        [Setting] public string? Format { get; set; }
+
         private List<PerformanceCounter> _gpuCounters = new();
 
         public override async Task Init(CancellationToken cancellationToken)
@@ -95,7 +101,8 @@ public class PerformanceCounters : CodeDeckPlugin
                 }
 
                 var usage = (int)_gpuCounters.Sum(x => x.NextValue());
-                Text = $"GPU\n{usage} %";
+                Text = string.Format(Format ?? "GPU\n{0} %", usage);
+
                 await Task.Delay(1000, cancellationToken);
             }
         }
