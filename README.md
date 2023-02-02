@@ -287,31 +287,31 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 
 ### List Of Built In Plugins & Tiles
 
-| Name                               | Tile                                                                                    | OS Support | Description                 |
-| ---------------------------------- | --------------------------------------------------------------------------------------- | ---------- | --------------------------- |
-| AudioDeviceSwitcher                | AudioDeviceSwitcherTile                                                                 | 🪟          |                             |
-| Clock                              | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md)                             | 🪟🐧         |                             |
-| Counter                            | [CounterTile](CodeDeck.Plugins/Plugins/Counter/Counter.md)                              | 🪟🐧         |                             |
-| CounterStrikeGlobalOffensiveNetCon | [ExecuteCommand](CodeDeck.Plugins/Plugins/CounterStrikeGlobalOffensiveNetCon/README.md) | 🪟🐧*        | *Linux support is untested. |
-| HyperXCloudFlightWireless          | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudFlightWireless/README.md)             | 🪟🐧*        | *Linux support is untested. |
-| Lock                               | [LockTile](CodeDeck.Plugins/Plugins/Lock/Lock.md)                                       | 🪟          |                             |
-| MediaKeys                          | MuteTile                                                                                | 🪟          |                             |
-|                                    | VolumeDownTile                                                                          | 🪟          |                             |
-|                                    | VolumeUpTile                                                                            | 🪟          |                             |
-|                                    | NextTrackTile                                                                           | 🪟          |                             |
-|                                    | PreviousTrackTile                                                                       | 🪟          |                             |
-|                                    | StopTile                                                                                | 🪟          |                             |
-|                                    | PlayPauseTile                                                                           | 🪟          |                             |
-| PerformanceCounters                | CpuUsageTile                                                                            | 🪟          |                             |
-|                                    | MemoryUsageTile                                                                         | 🪟          |                             |
-|                                    | GpuUsageTile                                                                            | 🪟          |                             |
-| Runner                             | [RunTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#runtile)                            | 🪟🐧         |                             |
-|                                    | [OpenWebsiteTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#openwebsitetile)            | 🪟🐧         |                             |
-| Template                           | TemplateTileOne                                                                         | 🪟🐧         |                             |
-|                                    | TemplateTileTwo                                                                         | 🪟🐧         |                             |
-| KeyboardSimulator                  | TyperTile                                                                               | 🪟          |                             |
-|                                    | HotkeyTile                                                                              | 🪟          |                             |
-| WebRequest                         | PlainTextTile                                                                           | 🪟🐧         |                             |
+| Name                               | Tile                                                                                      | OS Support | Description                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------------- | ---------- | --------------------------- |
+| AudioDeviceSwitcher                | AudioDeviceSwitcherTile                                                                   | 🪟          |                             |
+| Clock                              | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md)                               | 🪟🐧         |                             |
+| Counter                            | [CounterTile](CodeDeck.Plugins/Plugins/Counter/Counter.md)                                | 🪟🐧         |                             |
+| CounterStrikeGlobalOffensiveNetCon | [ExecuteCommand](CodeDeck.Plugins/Plugins/CounterStrikeGlobalOffensiveNetCon/README.md)   | 🪟🐧*        | *Linux support is untested. |
+| HyperXCloudFlightWireless          | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudFlightWireless/README.md)               | 🪟🐧*        | *Linux support is untested. |
+| Lock                               | [LockTile](CodeDeck.Plugins/Plugins/Lock/Lock.md)                                         | 🪟          |                             |
+| MediaKeys                          | MuteTile                                                                                  | 🪟          |                             |
+|                                    | VolumeDownTile                                                                            | 🪟          |                             |
+|                                    | VolumeUpTile                                                                              | 🪟          |                             |
+|                                    | NextTrackTile                                                                             | 🪟          |                             |
+|                                    | PreviousTrackTile                                                                         | 🪟          |                             |
+|                                    | StopTile                                                                                  | 🪟          |                             |
+|                                    | PlayPauseTile                                                                             | 🪟          |                             |
+| PerformanceCounters                | [CpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#cpuusagetile)       | 🪟          |                             |
+|                                    | [MemoryUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#memoryusagetile) | 🪟          |                             |
+|                                    | [GpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#gpuusagetile)       | 🪟          |                             |
+| Runner                             | [RunTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#runtile)                              | 🪟🐧         |                             |
+|                                    | [OpenWebsiteTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#openwebsitetile)              | 🪟🐧         |                             |
+| Template                           | TemplateTileOne                                                                           | 🪟🐧         |                             |
+|                                    | TemplateTileTwo                                                                           | 🪟🐧         |                             |
+| KeyboardSimulator                  | TyperTile                                                                                 | 🪟          |                             |
+|                                    | HotkeyTile                                                                                | 🪟          |                             |
+| WebRequest                         | PlainTextTile                                                                             | 🪟🐧         |                             |
 
 
 ### Plugin Development
