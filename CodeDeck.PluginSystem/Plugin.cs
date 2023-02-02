@@ -22,8 +22,9 @@ namespace CodeDeck.PluginSystem
         /// </summary>
         public string Name { get; set; }
 
-        public string AssemblyFileName => Path.Combine(PluginPath, $"{Name}.dll");
-        public string PdbFileName => Path.Combine(PluginPath, $"{Name}.pdb");
+        public string BuildPath => Path.Combine(PluginPath, "bin");
+        public string AssemblyFileName => Path.Combine(BuildPath, $"{Name}.dll");
+        public string PdbFileName => Path.Combine(BuildPath, $"{Name}.pdb");
 
         public List<FileInfo>? SourceFiles { get; set; }
 
@@ -45,6 +46,8 @@ namespace CodeDeck.PluginSystem
 
         public void Init()
         {
+            Directory.CreateDirectory(BuildPath);
+
             SourceFiles = GetAllSourceFiles();
             AssemblyFileInfo = GetAssemblyFileInfo();
 
@@ -109,7 +112,7 @@ namespace CodeDeck.PluginSystem
 
             var trustedAssembliesPaths = ((string)(AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""))
                 .Split(Path.PathSeparator);
-
+            
             var references = trustedAssembliesPaths
                 .Select(p => MetadataReference.CreateFromFile(p))
                 .ToList();
