@@ -196,13 +196,20 @@ namespace CodeDeck.PluginSystem
             {
                 if (settings?.TryGetValue(p.Name, out var value) ?? false)
                 {
-                    if (p.PropertyType == typeof(bool?) || p.PropertyType == typeof(bool))
+                    // Parse string
+                    if (p.PropertyType.Name == typeof(string).Name)
+                    {
+                        p.SetValue(tileInstance, value);
+                    }
+                    // Parse bool
+                    else if (p.PropertyType == typeof(bool?) || p.PropertyType == typeof(bool))
                     {
                         if (bool.TryParse(value, out var parsedValue))
                         {
                             p.SetValue(tileInstance, parsedValue);
                         }
                     }
+                    // Parse int
                     else if (p.PropertyType == typeof(int?) || p.PropertyType == typeof(int))
                     {
                         if (int.TryParse(value, out var parsedValue))
@@ -210,6 +217,7 @@ namespace CodeDeck.PluginSystem
                             p.SetValue(tileInstance, parsedValue);
                         }
                     }
+                    // Parse double
                     else if (p.PropertyType == typeof(double?) || p.PropertyType == typeof(double))
                     {
                         if (double.TryParse(value, out var parsedValue))
@@ -219,7 +227,7 @@ namespace CodeDeck.PluginSystem
                     }
                     else
                     {
-                        p.SetValue(tileInstance, value);
+                        _logger.LogWarning($"<{nameof(Plugin)}.{nameof(MapSettingsToTile)}> Can not map setting '{p.Name}' because data type '{p.PropertyType.Name}' is not supported.");
                     }
                 }
             }
