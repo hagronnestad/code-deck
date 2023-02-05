@@ -2,8 +2,22 @@
 
 # Code Deck
 
+
+## Description
+
+**Code Deck** is a cross platform and open source alternative to the official Stream Deck application.
+
+The `Code`-part of the name is a reference to how configuration and plugins work in **Code Deck**. The configuration is done using `JSON` and all plugins are `C#`-scripts.
+
+![Alt text](Screenshots/00-streamdeck.png)
+*Picture of **Code Deck** running my configuration on my Stream Deck.*
+
+
+## Table of Contents
+
 - [Code Deck](#code-deck)
   - [Description](#description)
+  - [Table of Contents](#table-of-contents)
   - [Concept](#concept)
     - [Key](#key)
     - [Page](#page)
@@ -29,15 +43,6 @@
   - [Attributions](#attributions)
   - [Disclaimer](#disclaimer)
 
-
-## Description
-
-**Code Deck** is a cross platform and open source alternative to the official Stream Deck application.
-
-The `Code`-part of the name is a reference to how configuration and plugins work in **Code Deck**. The configuration is done using `JSON` and all plugins are `C#`-scripts.
-
-![Alt text](Screenshots/00-streamdeck.png)
-*Picture of **Code Deck** running my configuration on my Stream Deck.*
 
 ## Concept
 
