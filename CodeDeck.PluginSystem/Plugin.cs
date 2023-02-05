@@ -1,14 +1,15 @@
-using Microsoft.CodeAnalysis.CSharp;
+using CodeDeck.PluginAbstractions;
 using Microsoft.CodeAnalysis;
-using System.Reflection;
-using System.Text;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
-using CodeDeck.PluginAbstractions;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Text;
 
 namespace CodeDeck.PluginSystem
 {
-    public class Plugin
+    public class Plugin : AssemblyLoadContext
     {
         private readonly ILogger _logger;
 
@@ -20,15 +21,18 @@ namespace CodeDeck.PluginSystem
         /// <summary>
         /// The name of the plugin. The plugin name is the same as the plugin directory name.
         /// </summary>
-        public string Name { get; set; }
+        new public string Name { get; set; }
 
         public string BuildPath => Path.Combine(PluginPath, "bin");
+        public string LibrariesPath => Path.Combine(PluginPath, "lib");
+        //public string NugetPath => Path.Combine(PluginPath, "nuget");
         public string AssemblyFileName => Path.Combine(BuildPath, $"{Name}.dll");
         public string PdbFileName => Path.Combine(BuildPath, $"{Name}.pdb");
 
         public List<FileInfo>? SourceFiles { get; set; }
 
-        public FileInfo? AssemblyFileInfo { get; set; }
+        public FileInfo? AssemblyFileInfo => File.Exists(AssemblyFileName) ? new FileInfo(AssemblyFileName) : null;
+
         public Assembly? Assembly { get; set; }
 
         public Type? PluginType { get; set; }
@@ -46,41 +50,61 @@ namespace CodeDeck.PluginSystem
 
         public void Init()
         {
+            // Create default directories
             Directory.CreateDirectory(BuildPath);
 
             SourceFiles = GetAllSourceFiles();
-            AssemblyFileInfo = GetAssemblyFileInfo();
 
+            // Recompile plugin if a compiled assembly doesn't exist or
+            // if a source files has been changed since last compilation
             if (AssemblyFileInfo == null || !IsAssemblyUpToDate())
             {
                 _logger.LogInformation($"<{nameof(Plugin)}.{nameof(Init)}> Compiling plugin: '{Name}'");
-                Compile();
-            }
-            else
-            {
-                _logger.LogInformation($"<{nameof(Plugin)}.{nameof(Init)}> Loading cached plugin: '{AssemblyFileInfo.FullName}'");
-                Assembly = Assembly.LoadFile(AssemblyFileInfo.FullName);
+                if (!CompilePlugin())
+                {
+                    _logger.LogError($"<{nameof(Plugin)}.{nameof(Init)}> Encountered errors while compiling plugin: '{Name}'");
+                    return;
+                }
             }
 
-            ReadPluginType();
+            _logger.LogInformation($"<{nameof(Plugin)}.{nameof(Init)}> Loading plugin: '{AssemblyFileName}'");
+
+            // Load the plugin and libraries used by the plugin into the AssemblyLoadContext
+            LoadAllLibraries();
+            Assembly = LoadFromAssemblyPath(AssemblyFileName);
+            
+            // Get the plugin type inside the loaded assembly
+            PluginType = GetPluginType();
+            if (PluginType == null)
+            {
+                _logger.LogWarning($"<{nameof(Plugin)}.{nameof(Init)}> Assembly; '{Name}' does not contain a valid plugin!");
+            }
+        }
+
+        public void LoadAllLibraries()
+        {
+            if (!Directory.Exists(LibrariesPath)) return;
+
+            var assemblies = Directory.GetFiles(LibrariesPath, "*.dll", SearchOption.AllDirectories);
+            foreach (var assembly in assemblies)
+            {
+                try
+                {
+                    LoadFromAssemblyPath(Path.GetFullPath(assembly));
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning($"<{nameof(Plugin)}.{nameof(LoadAllLibraries)}> Error while loading library: '{Path.GetFullPath(assembly)}'. Exception: {e.Message}");
+                }
+            }
         }
 
         public List<FileInfo> GetAllSourceFiles()
         {
             var sourceFiles = Directory.GetFiles(PluginPath, "*.cs", SearchOption.AllDirectories);
             var sourceFilesInfo = sourceFiles.Select(x => new FileInfo(x));
-            
+
             return sourceFilesInfo.ToList();
-        }
-
-        public FileInfo? GetAssemblyFileInfo()
-        {
-            if (File.Exists(AssemblyFileName))
-            {
-                return new FileInfo(AssemblyFileName);
-            }
-
-            return null;
         }
 
         public bool IsAssemblyUpToDate()
@@ -95,12 +119,12 @@ namespace CodeDeck.PluginSystem
             return assemblyWriteTime > latestSourceFileWriteTime;
         }
 
-        public bool Compile()
+        public bool CompilePlugin()
         {
             if (SourceFiles is null || !SourceFiles.Any()) return false;
 
+            // Read all source files and parse into syntax trees
             var syntaxTrees = new List<SyntaxTree>();
-
             foreach (var sf in SourceFiles)
             {
                 var data = File.ReadAllBytes(sf.FullName);
@@ -110,22 +134,30 @@ namespace CodeDeck.PluginSystem
                 syntaxTrees.Add(syntaxTree);
             }
 
+            // Get trusted assemblies
             var trustedAssembliesPaths = ((string)(AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""))
-                .Split(Path.PathSeparator);
-            
+                .Split(Path.PathSeparator).ToList();
+
+            // Get assemblies in the libraries directory
+            if (Directory.Exists(LibrariesPath))
+            {
+                trustedAssembliesPaths.AddRange(Directory.GetFiles(LibrariesPath, "*.dll", SearchOption.AllDirectories));
+            }
+
+            // Convert all assembly paths into references
             var references = trustedAssembliesPaths
                 .Select(p => MetadataReference.CreateFromFile(p))
                 .ToList();
 
+            // Create the compilation
             var compilation = CSharpCompilation.Create(
-                null,
+                Name,
                 syntaxTrees,
                 references,
-                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
-            );
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, platform: Platform.AnyCpu));
 
+            // Try to compile and emit assembly and PDB 
             var emitResult = compilation.Emit(AssemblyFileName, PdbFileName);
-
             if (!emitResult.Success)
             {
                 // When the compilation fails, it leaves behind zero byte files, remove them
@@ -134,36 +166,31 @@ namespace CodeDeck.PluginSystem
 
                 foreach (var d in emitResult.Diagnostics)
                 {
-                    _logger.LogError($"<{nameof(Plugin)}.{nameof(Compile)}> Error: {d.Location}: {d.GetMessage()}");
+                    _logger.LogError($"<{nameof(Plugin)}.{nameof(CompilePlugin)}> Error: {d.Location}: {d.GetMessage()}");
                 }
                 return false;
             }
 
-            Assembly = Assembly.LoadFile(AssemblyFileName);
             return true;
         }
 
-        private bool ReadPluginType()
+        private Type? GetPluginType()
         {
-            if (Assembly is null) return false;
+            if (Assembly is null) return null;
 
             var pluginType = Assembly
                 .GetTypes()
                 .FirstOrDefault(x => x.BaseType != null && x.BaseType.Equals(typeof(CodeDeckPlugin)));
 
-            if (pluginType == null)
-            {
-                _logger.LogWarning("Assembly does not contain a valid plugin!");
-                return false;
-            }
-
-            PluginType = pluginType;
-            return true;
+            return pluginType;
         }
 
         public Tile? CreateTileInstance(string tileTypeName, Dictionary<string, string>? settings)
         {
-            if (PluginType is null) return null;
+            if (PluginType is null)
+            {
+                return null;
+            }
 
             var tileType = PluginType
                 .GetNestedTypes()
@@ -171,8 +198,15 @@ namespace CodeDeck.PluginSystem
                 .Where(x => x.Name == tileTypeName)
                 .FirstOrDefault();
 
-            if (tileType is null) return null;
-            if (Activator.CreateInstance(tileType) is not Tile tileInstance) return null;
+            if (tileType is null)
+            {
+                return null;
+            }
+
+            if (Activator.CreateInstance(tileType) is not Tile tileInstance)
+            {
+                return null;
+            }
 
             MapSettingsToTile(settings, tileType, tileInstance);
 

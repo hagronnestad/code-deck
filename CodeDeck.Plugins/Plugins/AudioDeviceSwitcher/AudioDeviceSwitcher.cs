@@ -1,4 +1,6 @@
-﻿using AudioSwitcher.AudioApi.CoreAudio;
+﻿using AudioSwitcher.AudioApi;
+using AudioSwitcher.AudioApi.CoreAudio;
+using AudioSwitcher.AudioApi.Session;
 using CodeDeck.PluginAbstractions;
 using System;
 using System.Collections.Generic;
@@ -19,7 +21,7 @@ namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
         static AudioDeviceSwitcher()
         {
             _audioController = new CoreAudioController();
-            _devices = _audioController.GetPlaybackDevices();
+            _devices = _audioController.GetPlaybackDevices(DeviceState.Active);
         }
 
         public class AudioDeviceSwitcherTile : Tile
@@ -42,10 +44,8 @@ namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
                 if (_device == null) return;
-                _audioController?.SetDefaultDevice(_device);
-
+                _device.SetAsDefault();
                 SystemSounds.Beep.Play();
-
                 await Task.CompletedTask;
             }
         }

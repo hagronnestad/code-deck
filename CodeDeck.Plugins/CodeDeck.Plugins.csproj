@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
@@ -7,12 +7,63 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AudioSwitcher.AudioApi" Version="3.0.0" />
-    <PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="3.0.0.1" />
-    <PackageReference Include="HidSharp" Version="2.1.0" />
-    <PackageReference Include="InputSimulatorEx" Version="2.1.1" />
-    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="7.0.0" />
-    <PackageReference Include="System.Windows.Extensions" Version="7.0.0" />
+    <Compile Remove="TestPluginProject\**" />
+    <EmbeddedResource Remove="TestPluginProject\**" />
+    <None Remove="TestPluginProject\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Plugins\AudioDeviceSwitcher\AudioDeviceSwitcher.cs" />
+    <Compile Remove="Plugins\Clock\Clock.cs" />
+    <Compile Remove="Plugins\CounterStrikeGlobalOffensiveNetCon\CounterStrikeGlobalOffensiveNetCon.cs" />
+    <Compile Remove="Plugins\Counter\Counter.cs" />
+    <Compile Remove="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs" />
+    <Compile Remove="Plugins\KeyboardSimulator\KeyboardSimulator.cs" />
+    <Compile Remove="Plugins\Lock\Lock.cs" />
+    <Compile Remove="Plugins\MediaKeys\MediaKeys.cs" />
+    <Compile Remove="Plugins\PerformanceCounters\PerformanceCounters.cs" />
+    <Compile Remove="Plugins\Runner\Runner.cs" />
+    <Compile Remove="Plugins\Template\Template.cs" />
+    <Compile Remove="Plugins\WebRequest\WebRequest.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Plugins\AudioDeviceSwitcher\AudioDeviceSwitcher.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\Clock\Clock.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\CounterStrikeGlobalOffensiveNetCon\CounterStrikeGlobalOffensiveNetCon.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\Counter\Counter.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\KeyboardSimulator\KeyboardSimulator.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\Lock\Lock.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\MediaKeys\MediaKeys.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\PerformanceCounters\PerformanceCounters.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\Runner\Runner.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\Template\Template.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\WebRequest\WebRequest.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -20,42 +71,30 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Plugins\AudioDeviceSwitcher\AudioDeviceSwitcher.cs">
+    <None Update="Plugins\AudioDeviceSwitcher\lib\AudioSwitcher.AudioApi.CoreAudio.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Clock\Clock.cs">
+    </None>
+    <None Update="Plugins\AudioDeviceSwitcher\lib\AudioSwitcher.AudioApi.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\CounterStrikeGlobalOffensiveNetCon\CounterStrikeGlobalOffensiveNetCon.cs">
+    </None>
+    <None Update="Plugins\AudioDeviceSwitcher\lib\System.Drawing.Common.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs">
+    </None>
+    <None Update="Plugins\AudioDeviceSwitcher\lib\System.Windows.Extensions.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Counter\Counter.cs">
+    </None>
+    <None Update="Plugins\KeyboardSimulator\lib\AssemblyAttribute.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Lock\Lock.cs">
+    </None>
+    <None Update="Plugins\KeyboardSimulator\lib\InputSimulatorEx.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\MediaKeys\MediaKeys.cs">
+    </None>
+    <None Update="Plugins\PerformanceCounters\lib\System.Diagnostics.PerformanceCounter.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\PerformanceCounters\PerformanceCounters.cs">
+    </None>
+    <None Update="Plugins\Runner\lib\System.Drawing.Common.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Runner\Runner.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\Template\Template.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\KeyboardSimulator\KeyboardSimulator.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Plugins\WebRequest\WebRequest.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
+    </None>
   </ItemGroup>
 
 </Project>
