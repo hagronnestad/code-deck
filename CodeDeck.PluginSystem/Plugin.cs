@@ -72,7 +72,7 @@ namespace CodeDeck.PluginSystem
             // Load the plugin and libraries used by the plugin into the AssemblyLoadContext
             LoadAllLibraries();
             Assembly = LoadFromAssemblyPath(AssemblyFileName);
-            
+
             // Get the plugin type inside the loaded assembly
             PluginType = GetPluginType();
             if (PluginType == null)

@@ -31,7 +31,7 @@ namespace CodeDeck
                     logging.SetMinimumLevel(LogLevel.Debug);
                     logging.AddConsole();
                     logging.AddDebug();
-                    
+
                     //logging.AddEventLog();
                 })
                 .Build();

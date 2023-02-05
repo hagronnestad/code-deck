@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace CodeDeck.PluginAbstractions
+﻿namespace CodeDeck.PluginAbstractions
 {
     /// <summary>
     /// The base class for all plugins

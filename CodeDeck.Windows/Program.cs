@@ -12,7 +12,8 @@ namespace CodeDeck.Windows
         {
             _ = CodeDeck.Program.Main(args);
 
-            var f = new Form() {
+            var f = new Form()
+            {
                 Visible = false,
                 ShowInTaskbar = false,
                 WindowState = FormWindowState.Minimized

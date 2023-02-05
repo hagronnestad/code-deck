@@ -1,5 +1,4 @@
-﻿using CodeDeck.PluginAbstractions;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;

@@ -1,20 +1,20 @@
-﻿using OpenMacroBoard.SDK;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Drawing.Processing;
-using System.Linq;
-using SixLabors.ImageSharp.Drawing;
-using System.Collections.Generic;
-using CodeDeck.Models.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using CodeDeck.Models.Configuration;
 using CodeDeck.PluginSystem;
-using System.Threading.Tasks;
-using System;
-using StreamDeckSharp;
-using Microsoft.Win32;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
+using OpenMacroBoard.SDK;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using StreamDeckSharp;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CodeDeck
 {
