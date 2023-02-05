@@ -4,9 +4,15 @@
 
 - [Plugin Development](#plugin-development)
   - [Quick Start](#quick-start)
-  - [Development Environment \& Debugging](#development-environment--debugging)
-    - [Developing Without IDE](#developing-without-ide)
-  - [Nuget \& External Libraries](#nuget--external-libraries)
+  - [Plugin Directory Structure](#plugin-directory-structure)
+  - [Develop A *User* Plugin](#develop-a-user-plugin)
+    - [Debugging](#debugging)
+    - [External Libraries](#external-libraries)
+    - [Nuget](#nuget)
+      - [Example From The `PerformanceCounters` Plugin](#example-from-the-performancecounters-plugin)
+  - [Develop A *Builtin* Plugin](#develop-a-builtin-plugin)
+    - [`CodeDeck.Plugins`-project](#codedeckplugins-project)
+    - [Documentation](#documentation)
 
 
 ## Quick Start
@@ -71,18 +77,41 @@ public class Template : CodeDeckPlugin
 ```
 
 
-## Development Environment & Debugging
-
-- All you need to modify and create plugins is a text editor. A code editor with C# support would be even better.
-
-- If you want to have your plugin included as a part of **Code Deck**, I would suggest cloning the whole **Code Deck** repo from GitHub and create a new plugin in the `CodeDeck.Plugins`-project using Visual Studio or Visual Studio Code.
-  - This also improves the development process because the plugin is compiled as part of the project and any errors show up in the IDE.
-  - ❕Even though the plugins are compiled as part of the project, the source files still gets copied to the output directory where **Code Deck** will load and compile them on the fly during startup. This means that breakpoints set inside a plugin source file while debugging **Code Deck** will *NOT* be hit.❕
+## Plugin Directory Structure
 
 
-### Developing Without IDE
 
-If you don't want to clone the repo or use an IDE, your only option is to run **Code Deck** and check the console/log output for compilation errors.
+```powershell
+"Code Deck Root Directory"
+└───Plugins
+    └───MyCustomPlugin
+        │   # All C# source files making up the plugin
+        │   SourceFile1.cs
+        │   SourceFile2.cs
+        │   ...
+        │
+        ├───bin
+        │       # Compiled assemblies, no user files should be placed here
+        │       MyCustomPlugin.dll
+        │       MyCustomPlugin.pdb
+        │
+        └───lib
+                # Any external libraries goes in here
+                MyExternalLib1.dll
+                MyExternalLib2.dll
+                ...
+```
+
+
+## Develop A *User* Plugin
+This is a plugin developed by a regular user.
+
+All you need to modify or create plugins is a text editor. A code editor with `C#` syntax highlighting is recommended.
+
+
+### Debugging
+
+When developing a plugin it is suggested to run **Code Deck** through `CodeDeck.exe` in a terminal. This will give you access to the log output which shows errors and warnings.
 
 An example would look something like this:
 ```log
@@ -90,6 +119,126 @@ CodeDeck.PluginSystem.PluginLoader: Error: SourceFile([383..387)): The name '_ct
 CodeDeck.PluginSystem.PluginLoader: Warning: Plugin Plugins\Counter did not produce an assembly.
 ```
 
+### External Libraries
 
-## Nuget & External Libraries
-All Nuget dependencies for the current built in plugins are added to the `CodeDeck.Plugins`-project. This is a temporary solution. I would like to remove all dependencies from the `CodeDeck.Plugins`-project and add support for Nuget at the plugin level.
+It is possible to use external libraries by adding them to a `lib` directory.
+
+*Example from `AudioDeviceSwitcher` plugin:*
+```powershell
+Plugins
+├───AudioDeviceSwitcher.cs
+│
+├───bin
+│       AudioDeviceSwitcher.dll
+│       AudioDeviceSwitcher.pdb
+│
+└───lib
+        AudioSwitcher.AudioApi.CoreAudio.dll
+        AudioSwitcher.AudioApi.dll
+        System.Drawing.Common.dll
+        System.Windows.Extensions.dll
+```
+
+### Nuget
+Automatic Nuget support through `packages.json` or similar is planned, but not implemented. It's possible to download Nuget-packages and add them to the `lib` directory manually.
+
+***⚠️ Make sure to add the correct (runtime/framework version) assembly from the Nuget and only one assembly with the same name. Code Deck currently uses `net7.0`.***
+
+#### Example From The `PerformanceCounters` Plugin
+
+Install `System.Diagnostics.PerformanceCounter` using `nuget.exe`:
+
+```powershell
+> nuget install System.Diagnostics.PerformanceCounter
+
+Installing package 'System.Diagnostics.PerformanceCounter' to 'Plugins\PerformanceCounters'.
+  GET https://api.nuget.org/v3/registration5-gz-semver2/system.diagnostics.performancecounter/index.json
+  OK https://api.nuget.org/v3/registration5-gz-semver2/system.diagnostics.performancecounter/index.json 606ms
+
+
+Attempting to gather dependency information for package 'System.Diagnostics.PerformanceCounter.7.0.0' with respect to project 'Plugins\PerformanceCounters', targeting 'Any,Version=v0.0'
+Gathering dependency information took 18 ms
+Attempting to resolve dependencies for package 'System.Diagnostics.PerformanceCounter.7.0.0' with DependencyBehavior 'Lowest'
+Resolving dependency information took 0 ms
+Resolving actions to install package 'System.Diagnostics.PerformanceCounter.7.0.0'
+Resolved actions to install package 'System.Diagnostics.PerformanceCounter.7.0.0'
+Retrieving package 'System.Diagnostics.PerformanceCounter 7.0.0' from 'nuget.org'.
+Adding package 'System.Diagnostics.PerformanceCounter.7.0.0' to folder 'Plugins\PerformanceCounters'
+Added package 'System.Diagnostics.PerformanceCounter.7.0.0' to folder 'Plugins\PerformanceCounters'
+Successfully installed 'System.Diagnostics.PerformanceCounter 7.0.0' to Plugins\PerformanceCounters
+Executing nuget actions took 236 ms
+```
+
+Now lets have a look inside the Nuget and figure out which assembly to use.
+
+```powershell
+> cd System.Diagnostics.PerformanceCounter.7.0.0
+
+> tree /F
+
+├───lib
+│   ├───net462
+│   │       System.Diagnostics.PerformanceCounter.dll
+│   │       System.Diagnostics.PerformanceCounter.xml
+│   │
+│   ├───net6.0
+│   │       System.Diagnostics.PerformanceCounter.dll
+│   │       System.Diagnostics.PerformanceCounter.xml
+│   │
+│   ├───net7.0
+│   │       System.Diagnostics.PerformanceCounter.dll
+│   │       System.Diagnostics.PerformanceCounter.xml
+│   │
+│   └───netstandard2.0
+│           System.Diagnostics.PerformanceCounter.dll
+│           System.Diagnostics.PerformanceCounter.xml
+│
+└───runtimes
+    └───win
+        └───lib
+            ├───net6.0
+            │       System.Diagnostics.PerformanceCounter.dll
+            │       System.Diagnostics.PerformanceCounter.xml
+            │
+            └───net7.0
+                    System.Diagnostics.PerformanceCounter.dll
+                    System.Diagnostics.PerformanceCounter.xml
+
+
+```
+If `lib` contains an assembly for `net7.0` (or `net6.0`), this is usually the assembly you want.
+
+However, for `System.Diagnostics.PerformanceCounter.dll`, the assembly in `lib` will give you an error similar to: "Performance Counters are not supported on this platform." at runtime and that's because `System.Diagnostics.PerformanceCounter.dll` is platform specific.
+
+In the above case we have to use the `System.Diagnostics.PerformanceCounter.dll` assembly from `System.Diagnostics.PerformanceCounter.7.0.0\runtimes\win\lib\net7.0`.
+
+Copy the correct assembly to the plugins `lib` directory:
+
+```powershell
+\publish\Plugins>tree /F
+
+└───PerformanceCounters
+    │   PerformanceCounters.cs
+    │
+    └───lib
+            System.Diagnostics.PerformanceCounter.dll
+
+```
+
+**Code Deck** should now be able to compile the plugin against the added assembly and reference the added assembly at runtime.
+
+
+## Develop A *Builtin* Plugin
+This is inteded for advanced users and mainly for plugins that are general enough that it makes sense to include them into **Code Deck** itself.
+
+If you want to have your plugin included as a part of the **Code Deck** application, I would suggest cloning the whole **Code Deck** repo from GitHub and creating a new plugin directory in the `CodeDeck.Plugins`-project using Visual Studio or Visual Studio Code.
+
+
+### `CodeDeck.Plugins`-project
+The `CodeDeck.Plugins`-project is just a container project for the plugins. Each plugin should have their own directory and the source files should be set to `Build Action: Content` and `Copy to output directory: Copy if newer`.
+
+The `CodeDeck.Plugins`-project should ***NOT*** reference any external packages.
+
+
+### Documentation
+Add a `README.md` file in the same directory as the rest of the plugin. Use the `README.md` from one of the other plugins as a template.
