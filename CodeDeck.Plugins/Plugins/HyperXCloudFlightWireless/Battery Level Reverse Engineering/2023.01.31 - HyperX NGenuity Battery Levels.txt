@@ -1,0 +1,32 @@
+// Mapping of raw USB battery levels to the battery level reported by NGenuity software
+// These values are collected manually
+// The level reported by NGenuity software **should** provide a more linear value
+
+66 => 85
+65 => 85
+64 => 85
+60 => 80
+59 => 80
+58 => 80
+57 => 75
+56 => 75
+55 => 75
+54 => 75
+53 => 75
+49 => 70
+48 => 65
+45 => 60
+44 => 60
+42 => 60
+41 => 55
+40 => 55
+38 => 45
+37 => 45
+35 => 40
+34 => 35
+33 => 35
+32 => 30
+30 => 25
+29 => 25
+28 => 20
+27 => 20
