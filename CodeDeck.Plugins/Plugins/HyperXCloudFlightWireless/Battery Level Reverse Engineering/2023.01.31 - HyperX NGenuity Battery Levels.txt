@@ -2,6 +2,23 @@
 // These values are collected manually
 // The level reported by NGenuity software **should** provide a more linear value
 
+96 => 100
+93 => 100
+92 => 100
+91 => 100
+90 => 100
+88 => 100
+87 => 100
+85 => 100
+84 => 100
+81 => 100
+79 => 100
+76 => 95
+74 => 95
+70 => 90
+69 => 90
+67 => 85
+68 => 85
 66 => 85
 65 => 85
 64 => 85
