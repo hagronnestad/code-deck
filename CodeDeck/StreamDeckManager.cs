@@ -1,4 +1,4 @@
-﻿using CodeDeck.Models.Configuration;
+using CodeDeck.Models.Configuration;
 using CodeDeck.PluginSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
@@ -386,7 +386,7 @@ namespace CodeDeck
             bool fontBold = keyWrapper.Key.FontBold ?? false;
             bool fontItalic = keyWrapper.Key.FontItalic ?? false;
             float fontSize = keyWrapper.Key.FontSize ?? keyWrapper.Tile?.FontSize ?? 16.0f;
-            float lineSpacing = keyWrapper.Key.LineSpacing ?? 1.0f;
+            float lineSpacing = keyWrapper.Key.LineSpacing ?? 1.1f;
             Color textColor = keyWrapper.Key.TextColorAsColor ?? keyWrapper.Tile?.TextColor ?? Color.White;
             Color bgColor = keyWrapper.Key.BackgroundColorAsColor ?? keyWrapper.Tile?.BackgroundColor ?? Color.Transparent;
             Image? image = keyWrapper.Image ?? keyWrapper.Tile?.Image;
