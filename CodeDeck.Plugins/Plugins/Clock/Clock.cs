@@ -1,9 +1,9 @@
-﻿using CodeDeck.PluginAbstractions;
+using CodeDeck.PluginAbstractions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CodeDeck.Plugins.Plugins.Counter;
+namespace CodeDeck.Plugins.Plugins.Clock;
 
 public class Clock : CodeDeckPlugin
 {
