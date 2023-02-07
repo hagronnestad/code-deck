@@ -296,6 +296,7 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 | ---------------------------------- | ----------------------------------------------------------------------------------------- | ---------- | --------------------------- |
 | AudioDeviceSwitcher                | AudioDeviceSwitcherTile                                                                   | 🪟          |                             |
 | Clock                              | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md)                               | 🪟🐧         |                             |
+|                                    | [StopWatchTile](CodeDeck.Plugins/Plugins/Clock/Clock.md#stopwatchtile)                    | 🪟🐧         |                             |
 | Counter                            | [CounterTile](CodeDeck.Plugins/Plugins/Counter/Counter.md)                                | 🪟🐧         |                             |
 | CounterStrikeGlobalOffensiveNetCon | [ExecuteCommand](CodeDeck.Plugins/Plugins/CounterStrikeGlobalOffensiveNetCon/README.md)   | 🪟🐧*        | *Linux support is untested. |
 | HyperXCloudFlightWireless          | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudFlightWireless/README.md)               | 🪟🐧*        | *Linux support is untested. |
