@@ -308,6 +308,7 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 |                                    | PreviousTrackTile                                                                         | 🪟          |                             |
 |                                    | StopTile                                                                                  | 🪟          |                             |
 |                                    | PlayPauseTile                                                                             | 🪟          |                             |
+| NetworkTools                       | [ExternalIpTile](CodeDeck.Plugins/Plugins/NetworkTools/README.md)                         | 🪟🐧         |                             |
 | PerformanceCounters                | [CpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#cpuusagetile)       | 🪟          |                             |
 |                                    | [MemoryUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#memoryusagetile) | 🪟          |                             |
 |                                    | [GpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#gpuusagetile)       | 🪟          |                             |

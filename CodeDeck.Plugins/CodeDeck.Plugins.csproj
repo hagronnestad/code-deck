@@ -22,6 +22,7 @@
     <Compile Remove="Plugins\KeyboardSimulator\KeyboardSimulator.cs" />
     <Compile Remove="Plugins\Lock\Lock.cs" />
     <Compile Remove="Plugins\MediaKeys\MediaKeys.cs" />
+    <Compile Remove="Plugins\NetworkTools\ExternalIpTile.cs" />
     <Compile Remove="Plugins\PerformanceCounters\PerformanceCounters.cs" />
     <Compile Remove="Plugins\Runner\Runner.cs" />
     <Compile Remove="Plugins\Template\Template.cs" />
@@ -54,6 +55,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\MediaKeys\MediaKeys.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\NetworkTools\ExternalIpTile.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\PerformanceCounters\PerformanceCounters.cs">
