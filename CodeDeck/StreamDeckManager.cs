@@ -1,4 +1,4 @@
-using CodeDeck.Models.Configuration;
+﻿using CodeDeck.Models.Configuration;
 using CodeDeck.PluginSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
@@ -23,7 +23,7 @@ namespace CodeDeck
         private readonly ILogger<StreamDeckManager> _logger;
         private readonly ConfigurationProvider _configurationProvider;
         public StreamDeckConfiguration _configuration;
-        private readonly IMacroBoard? _streamDeck;
+        private readonly IMacroBoard _streamDeck;
         private readonly PluginLoader _pluginLoader;
         private readonly List<KeyWrapper> _keyWrappers = new();
         private readonly FontCollection _fontCollection = new();
@@ -54,14 +54,15 @@ namespace CodeDeck
             _fontCollection.Add("Fonts/Ubuntu-MediumItalic.ttf");
             _fontCollection.Add("Fonts/Ubuntu-Regular.ttf");
 
-            _streamDeck = OpenStreamDeck();
+            var sd = OpenStreamDeck();
 
-            if (_streamDeck is null)
+            if (sd is null)
             {
                 _logger.LogError($"{nameof(OpenStreamDeck)} failed!");
                 Environment.Exit(1);
             }
 
+            _streamDeck = sd;
             _streamDeck.ConnectionStateChanged += StreamDeck_ConnectionStateChanged;
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
 
