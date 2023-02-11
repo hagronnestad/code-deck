@@ -318,7 +318,8 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 |                                    | TemplateTileTwo                                                                           | 🪟🐧         |                             |
 | KeyboardSimulator                  | TyperTile                                                                                 | 🪟          |                             |
 |                                    | HotkeyTile                                                                                | 🪟          |                             |
-| WebRequest                         | PlainTextTile                                                                             | 🪟🐧         |                             |
+| WebRequest                         | [PlainTextTile](CodeDeck.Plugins/Plugins/WebRequest/WebRequest.md)                        | 🪟🐧         |                             |
+|                                    | [ImageTile](CodeDeck.Plugins/Plugins/WebRequest/WebRequest.md#imagetile)                  | 🪟🐧         |                             |
 
 
 ### Plugin Development

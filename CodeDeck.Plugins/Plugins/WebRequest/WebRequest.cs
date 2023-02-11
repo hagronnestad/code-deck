@@ -67,6 +67,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
             [Setting] public string? Url { get; set; }
             [Setting] public int Interval { get; set; } = 60000;
             [Setting] public int Size { get; set; } = 72;
+            [Setting] public bool Crop { get; set; } = false;
 
             public override async Task Init(CancellationToken cancellationToken)
             {
@@ -90,6 +91,18 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
 
                     if (image != null)
                     {
+                        if (Crop)
+                        {
+                            var cropSize = Math.Min(image.Width, image.Height);
+
+                            image.Mutate(i => i.Crop(new Rectangle(
+                                image.Width / 2 - cropSize / 2,
+                                image.Height / 2 - cropSize / 2,
+                                cropSize,
+                                cropSize
+                            )));
+                        }
+
                         image.Mutate(i => i.Resize(new ResizeOptions()
                         {
                             Mode = ResizeMode.Max,

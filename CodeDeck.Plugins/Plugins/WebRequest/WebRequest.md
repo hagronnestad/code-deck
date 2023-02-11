@@ -16,6 +16,7 @@ The WebRequest plugin contains a collection of tiles that can request and displa
     - [Example Config](#example-config-1)
       - [Url](#url-1)
       - [Interval](#interval-1)
+      - [Crop](#crop)
 
 
 ## PlainTextTile
@@ -84,10 +85,11 @@ A use case could be to display an image from a webcam.
 
 ### Settings
 
-| Setting  | Default    | Description         |
-| -------- | ---------- | ------------------- |
-| Url      | `null`     | The URL to request. |
-| Interval | `60000` ms | Update interval.    |
+| Setting  | Default    | Description                     |
+| -------- | ---------- | ------------------------------- |
+| Url      | `null`     | The URL to request.             |
+| Interval | `60000` ms | Update interval.                |
+| Crop     | `false`    | Crop the image to fill the key. |
 
 
 ### Example Config
@@ -108,3 +110,7 @@ The URL to retrieve an image from. The image data must be in a format listed [he
 
 #### Interval
 The time between requests to the specified URL.
+
+
+#### Crop
+If set to `true`, the image will be cropped to a square aspect ratio to fill the entire key. The image will be cropped from the center of the image.
