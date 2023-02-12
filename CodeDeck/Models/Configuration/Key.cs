@@ -24,6 +24,8 @@ namespace CodeDeck.Models.Configuration
         /// </summary>
         public string? Text { get; set; }
         public string? TextColor { get; set; }
+        public int? TextOffsetX { get; set; }
+        public int? TextOffsetY { get; set; }
         public float? LineSpacing { get; set; }
         public string? Font { get; set; }
         public float? FontSize { get; set; }
@@ -33,6 +35,8 @@ namespace CodeDeck.Models.Configuration
         public string? BackgroundColor { get; set; }
         public string? Image { get; set; }
         public int? ImagePadding { get; set; }
+        public int? ImageOffsetX { get; set; }
+        public int? ImageOffsetY { get; set; }
 
         public string? ActivityIndicatorColor { get; set; }
 

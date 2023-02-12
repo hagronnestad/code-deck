@@ -193,19 +193,28 @@ Full path to configuration file:
 ```json
 {
   "Index": 0,
+  "KeyType": "Normal",
+  "Profile": null,
+  "Page": null,
+  "Plugin": "Clock",
+  "Tile": "DigitalClockTile",
   "Text": "Clock",
+  "TextColor": "#ffffff",
+  "TextOffsetX": 0,
+  "TextOffsetY": 0,
+  "LineSpacing": 0.0,
   "Font": "Ubuntu",
   "FontSize": 18,
-  "TextColor": "#ffffff",
+  "FontBold": false,
+  "FontItalic": false,
   "BackgroundColor": "#000000",
   "Image": "image.png",
   "ImagePadding": 5,
+  "ImageOffsetX": 0,
+  "ImageOffsetY": 0,
   "ShowFolderIndicator": false,
   "FolderIndicatorColor": "#ff0000",
   "ActivityIndicatorColor": "#00ff00",
-  "KeyType": "Normal",
-  "Plugin": "Clock",
-  "Tile": "DigitalClockTile",
   "Settings": {
     "Format": "dd.\nMMM",
     "Interval": "60000"
@@ -216,24 +225,28 @@ Full path to configuration file:
 | Field                  | Example Values                     | Description                                                                                                                                           |
 | ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Index                  | `0` ... `X`                        | Index of the key on the Stream Deck. `X` = number of keys - `1`.                                                                                      |
-| Text                   | `"Some Text"`                      | The text to show on the key. Text is always centered. Use `\n` for multiple lines.                                                                    |
-| Font                   | `"Font Name"`                      | Name of the font to use for the `Text`.                                                                                                               |
-| FontSize               | `10`                               | Size of the `Font`.                                                                                                                                   |
-| FontBold               | `true` \| `false`                  |                                                                                                                                                       |
-| FontItalic             | `true` \| `false`                  |                                                                                                                                                       |
-| LineSpacing            | `1.0`                              | Spacing between lines. Value is in percent of the line height. `1.1` means the spacing is 10% more than the line height.                              |
-| TextColor              | `"#ffffff"`                        | Color of the `Text`.                                                                                                                                  |
-| BackgroundColor        | `"#000000"`                        | Color of the background color of the key.                                                                                                             |
-| Image                  | `filename.png`                     | Path to an image file. The image will be shown on the key.                                                                                            |
-| ImagePadding           | `5`                                | A padding to apply to the image. Very useful when trying to match all image sizes.                                                                    |
-| ShowFolderIndicator    | `true` \| `false`                  | An optional indicator to show on keys with `KeyType` = `Page`. The indicator is a line at the bottom of the key.                                      |
-| FolderIndicatorColor   | `"#cccccc"`                        |                                                                                                                                                       |
-| ActivityIndicatorColor | `"#ffff00"`                        | Color of the activity indicator. Some plugins may show this indicator while doing some task. The indicator is a small circle in the top right corner. |
 | KeyType                | `"Normal"` \| `"Back"` \| `"Page"` | The type of key. Default is `"Normal"`. `"Page"` is a key that navigates to another page. `"Back"` is a key that navigates backwards.                 |
 | Profile                | `"ProfileName"`                    | The name of the `Profile` that contains the `Page` to navigate to.                                                                                    |
 | Page                   | `"PageName"`                       | The name of the `Page` to navigate to.                                                                                                                |
 | Plugin                 | `"PluginName"`                     | The name of the `Plugin` to associate with this key.                                                                                                  |
 | Tile                   | `"TileName"`                       | The name of the `Tile` to associate with this key.                                                                                                    |
+| Text                   | `"Some Text"`                      | The text to show on the key. Text is always centered. Use `\n` for multiple lines.                                                                    |
+| TextColor              | `"#ffffff"`                        | Color of the `Text`.                                                                                                                                  |
+| TextOffsetX            | `0`                                | The offset to add to the X-position of the text.                                                                                                      |
+| TextOffsetY            | `-5`                               | The offset to add to the Y-position of the text.                                                                                                      |
+| LineSpacing            | `1.0`                              | Spacing between lines. Value is in percent of the line height. `1.1` means the spacing is 10% more than the line height.                              |
+| Font                   | `"Font Name"`                      | Name of the font to use for the `Text`.                                                                                                               |
+| FontSize               | `10`                               | Size of the `Font`.                                                                                                                                   |
+| FontBold               | `true` \| `false`                  |                                                                                                                                                       |
+| FontItalic             | `true` \| `false`                  |                                                                                                                                                       |
+| BackgroundColor        | `"#000000"`                        | Color of the background color of the key.                                                                                                             |
+| Image                  | `filename.png`                     | Path to an image file. The image will be shown on the key.                                                                                            |
+| ImagePadding           | `5`                                | A padding to apply to the image. Very useful when trying to match all image sizes.                                                                    |
+| ImageOffsetX           | `0`                                | The offset to add to the X-position of the image.                                                                                                     |
+| ImageOffsetY           | `-5`                               | The offset to add to the Y-position of the image.                                                                                                     |
+| ShowFolderIndicator    | `true` \| `false`                  | An optional indicator to show on keys with `KeyType` = `Page`. The indicator is a line at the bottom of the key.                                      |
+| FolderIndicatorColor   | `"#cccccc"`                        |                                                                                                                                                       |
+| ActivityIndicatorColor | `"#ffff00"`                        | Color of the activity indicator. Some plugins may show this indicator while doing some task. The indicator is a small circle in the top right corner. |
 | Settings               | `{ "Key": "Value", ... }`          | A key/value dictionary containing the settings needed to configure the `Tile`. All values ***MUST*** be `string`s.                                    |
 
 All fields are optional except for `Index`.

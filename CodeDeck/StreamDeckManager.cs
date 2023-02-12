@@ -396,6 +396,10 @@ namespace CodeDeck
             Color indicatorColor = keyWrapper.Key.ActivityIndicatorColorAsColor ?? keyWrapper.Tile?.IndicatorColor ?? Color.Yellow;
             bool? folderIndicator = keyWrapper.Key.ShowFolderIndicator ?? (keyWrapper.Key.KeyType == Key.KEY_TYPE_GOTO_PAGE);
             Color folderIndicatorColor = keyWrapper.Key.FolderIndicatorColorAsColor ?? Color.Blue;
+            int textOffsetX = keyWrapper.Key.TextOffsetX ?? 0;
+            int textOffsetY = keyWrapper.Key.TextOffsetY ?? 0;
+            int imageOffsetX = keyWrapper.Key.ImageOffsetX ?? 0;
+            int imageOffsetY = keyWrapper.Key.ImageOffsetY ?? 0;
 
             // Create key bitmap
             var i = new Image<Rgba32>(_streamDeck.Keys.KeySize, _streamDeck.Keys.KeySize);
@@ -408,7 +412,7 @@ namespace CodeDeck
             {
                 image.Mutate(i => i.Resize(_streamDeck.Keys.KeySize - (imagePadding * 2),
                     _streamDeck.Keys.KeySize - (imagePadding * 2)));
-                i.Mutate(x => x.DrawImage(image, new Point(imagePadding, imagePadding), 1f));
+                i.Mutate(x => x.DrawImage(image, new Point(imagePadding + imageOffsetX, imagePadding + imageOffsetY), 1f));
             }
 
             // Add text
@@ -425,7 +429,7 @@ namespace CodeDeck
                     var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
                     var textOptions = new TextOptions(f)
                     {
-                        Origin = center,
+                        Origin = new PointF(center.X + textOffsetX, center.Y + textOffsetY),
                         HorizontalAlignment = HorizontalAlignment.Center,
                         VerticalAlignment = VerticalAlignment.Center,
                         TextAlignment = TextAlignment.Center,
