@@ -1,5 +1,7 @@
-﻿using CodeDeck.Models.Configuration;
+﻿using CodeDeck.Models;
+using CodeDeck.Models.Configuration;
 using CodeDeck.PluginSystem;
+using CodeDeck.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -22,7 +24,7 @@ namespace CodeDeck
     {
         private readonly ILogger<StreamDeckManager> _logger;
         private readonly ConfigurationProvider _configurationProvider;
-        public StreamDeckConfiguration _configuration;
+        private readonly ProcessMonitor _processMonitor;
         private readonly IMacroBoard _streamDeck;
         private readonly PluginLoader _pluginLoader;
         private readonly List<KeyWrapper> _keyWrappers = new();
@@ -34,13 +36,14 @@ namespace CodeDeck
         public StreamDeckManager(
             ILogger<StreamDeckManager> logger,
             ConfigurationProvider configurationProvider,
+            ProcessMonitor processMonitor,
             PluginLoader pluginLoader
         )
         {
             _logger = logger;
             _configurationProvider = configurationProvider;
+            _processMonitor = processMonitor;
             _pluginLoader = pluginLoader;
-            _configuration = _configurationProvider.LoadConfiguration();
 
             _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
 
@@ -62,6 +65,9 @@ namespace CodeDeck
                 Environment.Exit(1);
             }
 
+            _processMonitor.ProcessStarted += ProcessMonitor_ProcessStarted;
+            _processMonitor.Start();
+
             _streamDeck = sd;
             _streamDeck.ConnectionStateChanged += StreamDeck_ConnectionStateChanged;
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
@@ -71,6 +77,16 @@ namespace CodeDeck
             {
                 SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
             }
+        }
+
+        private void ProcessMonitor_ProcessStarted(object? sender, string e)
+        {
+            var flatKeyConfiguration = _configurationProvider.LoadedFlatConfiguration
+                .FirstOrDefault(x => x.Page.ProcessStartedTrigger?.ToLower() == e);
+
+            if (flatKeyConfiguration is null) return;
+
+            GotoPage(flatKeyConfiguration.Profile.Name, flatKeyConfiguration.Page.Name);
         }
 
         private IMacroBoard? OpenStreamDeck()
@@ -94,9 +110,10 @@ namespace CodeDeck
                 }
 
                 // Open specified or default device
-                if (_configuration.DevicePath is not null)
+                if (_configurationProvider.LoadedConfiguration.DevicePath is not null)
                 {
-                    streamDeck = StreamDeck.OpenDevice(_configuration.DevicePath).WithButtonPressEffect();
+                    streamDeck = StreamDeck.OpenDevice(_configurationProvider.LoadedConfiguration.DevicePath)
+                        .WithButtonPressEffect();
                 }
                 else
                 {
@@ -104,7 +121,7 @@ namespace CodeDeck
                 }
 
                 streamDeck.ClearKeys();
-                streamDeck.SetBrightness((byte)_configuration.Brightness);
+                streamDeck.SetBrightness((byte)_configurationProvider.LoadedConfiguration.Brightness);
             }
             catch (Exception e)
             {
@@ -119,7 +136,7 @@ namespace CodeDeck
         {
             if (_streamDeck is null) return;
             _streamDeck.ClearKeys();
-            _streamDeck.SetBrightness((byte)_configuration.Brightness);
+            _streamDeck.SetBrightness((byte)_configurationProvider.LoadedConfiguration.Brightness);
             RefreshPage();
         }
 
@@ -170,7 +187,7 @@ namespace CodeDeck
         {
             if (!OperatingSystem.IsWindows()) return;
 
-            var lockScreenProfile = _configuration.Profiles
+            var lockScreenProfile = _configurationProvider.LoadedConfiguration.Profiles
                 .FirstOrDefault(x => x.ProfileType == Profile.PROFILE_TYPE_LOCK_SCREEN);
 
             var lockScreenPage = lockScreenProfile?.Pages
@@ -200,23 +217,12 @@ namespace CodeDeck
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void ConfigurationProvider_ConfigurationChanged(object? sender, System.EventArgs e)
+        private async void ConfigurationProvider_ConfigurationChanged(object? sender, EventArgs e)
         {
             if (_applyingConfiguration) return;
             _applyingConfiguration = true;
 
-            // TODO: Wait for file access ready in a better way
-            await Task.Delay(500); // Wait for file to finish writing
-            _configuration = _configurationProvider.LoadConfiguration();
-
-            // DeInit all Tiles
-            _keyWrappers.ForEach(x => x.CancellationTokenSource.Cancel());
-            await Task.WhenAll(_keyWrappers
-                .Where(x => x.Plugin != null)
-                .Select(x => x.Tile?.DeInit() ?? Task.CompletedTask));
-            _keyWrappers.Clear();
-
-            // Apply new configuration and refresh current page
+            await ClearKeyWrappers();
             await ApplyConfigurationAsync();
 
             _applyingConfiguration = false;
@@ -229,7 +235,18 @@ namespace CodeDeck
             _streamDeck?.SetKeyBitmap(_streamDeck.Keys.CountX / 2,
                 KeyBitmap.Create.FromImageSharpImage(Image.Load("Images/icon.png")));
 
-            var profile = _configuration.Profiles
+            // Clear and update monitored processes based on configuration
+            _processMonitor.Clear();
+            _configurationProvider.LoadedFlatConfiguration
+                .Select(x => x.Page)
+                .Distinct()
+                .Where(x => x.ProcessStartedTrigger is not null)
+                .Select(x => x.ProcessStartedTrigger)
+                .ToList()
+                .ForEach(x => _processMonitor.Add(x));
+
+            // Get first normal profile
+            var profile = _configurationProvider.LoadedConfiguration.Profiles
                 .FirstOrDefault(x => x.ProfileType == Profile.PROFILE_TYPE_NORMAL);
 
             if (profile == null)
@@ -238,6 +255,7 @@ namespace CodeDeck
                 return;
             }
 
+            // Get first page
             var page = profile.Pages?.FirstOrDefault();
             if (page == null)
             {
@@ -245,6 +263,7 @@ namespace CodeDeck
                 return;
             }
 
+            // Navigate to first page if no page exists on the navigation stack
             if (_navigationStack.Count == 0) _navigationStack.Push((profile.Name, page.Name));
 
             await CreateKeyWrappers();
@@ -255,14 +274,13 @@ namespace CodeDeck
         public async Task CreateKeyWrappers()
         {
             // Instantiate all wrappers based on configuration
-            var keyWrappers = (from profile in _configuration.Profiles
-                               from page in profile.Pages
-                               from key in page.Keys
-                               let plugin = _pluginLoader.LoadedPlugins.FirstOrDefault(x => x.Name == key.Plugin)
-                               let keyWrapper = new KeyWrapper(_logger, profile, page, key, plugin)
-                               orderby keyWrapper.Key.Index
-                               select keyWrapper)
-                               .ToList();
+            var keyWrappers = (
+                from flatKeyConfiguration in _configurationProvider.LoadedFlatConfiguration
+                let plugin = _pluginLoader.LoadedPlugins.FirstOrDefault(x => x.Name == flatKeyConfiguration.Key.Plugin)
+                let keyWrapper = new KeyWrapper(_logger, flatKeyConfiguration.Profile, flatKeyConfiguration.Page, flatKeyConfiguration.Key, plugin)
+                orderby keyWrapper.Key.Index
+                select keyWrapper
+            ).ToList();
 
             // Try to load the image specified for a key
             // This must be done here because not all keys are associated with a tile
@@ -285,13 +303,21 @@ namespace CodeDeck
             _keyWrappers.AddRange(keyWrappers);
         }
 
-        public void RemoveKeyWrapper()
+        public async Task ClearKeyWrappers()
         {
-            foreach (var keyWrapper in _keyWrappers)
+            // Remove all event handlers and cancel all running tasks
+            _keyWrappers.ForEach(keyWrapper =>
             {
                 keyWrapper.Updated -= KeyWrapper_Updated;
-                _keyWrappers.Remove(keyWrapper);
-            }
+                keyWrapper.CancellationTokenSource.Cancel();
+            });
+
+            // DeInit all Tiles
+            await Task.WhenAll(_keyWrappers
+                .Where(x => x.Plugin != null)
+                .Select(x => x.Tile?.DeInit() ?? Task.CompletedTask));
+
+            _keyWrappers.Clear();
         }
 
         /// <summary>
@@ -318,7 +344,7 @@ namespace CodeDeck
 
         public void GotoPage(string profileName, string pageName)
         {
-            var profile = _configuration.Profiles.FirstOrDefault(x => x.Name == profileName);
+            var profile = _configurationProvider.LoadedConfiguration.Profiles.FirstOrDefault(x => x.Name == profileName);
             var page = profile?.Pages.FirstOrDefault(x => x.Name == pageName);
 
             if (profile != null && page != null)
@@ -436,8 +462,8 @@ namespace CodeDeck
                         LineSpacing = lineSpacing
                     };
 
-                    if (_configuration.FallbackFont is not null &&
-                        _fontCollection.TryGet(_configuration.FallbackFont, out var fallBackFontFamily))
+                    if (_configurationProvider.LoadedConfiguration.FallbackFont is not null &&
+                        _fontCollection.TryGet(_configurationProvider.LoadedConfiguration.FallbackFont, out var fallBackFontFamily))
                     {
                         textOptions.FallbackFontFamilies = new[] { fallBackFontFamily };
                     }

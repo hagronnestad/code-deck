@@ -1,15 +1,23 @@
-﻿using CodeDeck.Models.Configuration;
+﻿using CodeDeck.Models;
+using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace CodeDeck
 {
     public class ConfigurationProvider
     {
+        private StreamDeckConfiguration _loadedConfiguration;
+        private List<FlatKeyConfiguration> _loadedFlatConfiguration;
+        private readonly ILogger<ConfigurationProvider> _logger;
+        private readonly FileSystemWatcher _fileSystemWatcher;
+
         public event EventHandler? ConfigurationChanged;
 
         public const string CONFIGURATION_FILE_NAME = "deck.json";
@@ -19,8 +27,17 @@ namespace CodeDeck
         public static readonly string ConfigFolder;
         public static readonly string ConfigFile;
 
-        private readonly ILogger<ConfigurationProvider> _logger;
-        private readonly FileSystemWatcher _fileSystemWatcher;
+        public StreamDeckConfiguration LoadedConfiguration
+        {
+            get { return _loadedConfiguration; }
+            set
+            {
+                _loadedConfiguration = value;
+                _loadedFlatConfiguration = GetFlatConfiguration(_loadedConfiguration);
+            }
+        }
+
+        public List<FlatKeyConfiguration> LoadedFlatConfiguration => _loadedFlatConfiguration;
 
         static ConfigurationProvider()
         {
@@ -39,6 +56,8 @@ namespace CodeDeck
                 Directory.CreateDirectory(ConfigFolder);
             }
 
+            LoadAndFlattenConfiguration();
+
             // Set up file system watcher
             _fileSystemWatcher = new FileSystemWatcher(ConfigFolder)
             {
@@ -47,19 +66,26 @@ namespace CodeDeck
                 NotifyFilter = NotifyFilters.LastWrite
             };
 
-            // Handle file system watcher changed event
-            _fileSystemWatcher.Changed += (sender, e) =>
-            {
-                ConfigurationChanged?.Invoke(this, e);
-            };
+            // Register file system watcher changed event
+            _fileSystemWatcher.Changed += Handle_FileSystemWatcher_Changed;
         }
 
-        public bool DoesConfigurationFileExists()
+        private async void Handle_FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
         {
-            return File.Exists(ConfigFile);
+            // TODO: Wait for file access ready in a better way
+            await Task.Delay(500); // Wait for file to finish writing
+            LoadAndFlattenConfiguration();
+            ConfigurationChanged?.Invoke(this, e);
         }
 
-        public StreamDeckConfiguration LoadConfiguration()
+        private void LoadAndFlattenConfiguration()
+        {
+            // Load configuration from file or load a default configuration
+            _loadedConfiguration = LoadConfiguration() ?? CreateDefaultConfiguration();
+            _loadedFlatConfiguration = GetFlatConfiguration(_loadedConfiguration);
+        }
+
+        private StreamDeckConfiguration? LoadConfiguration()
         {
             try
             {
@@ -85,16 +111,36 @@ namespace CodeDeck
                     ReadCommentHandling = JsonCommentHandling.Skip
                 });
 
-                if (configuration is not null) return configuration;
+                if (configuration is not null)
+                {
+                    return configuration;
+                }
             }
             catch (Exception e)
             {
                 _logger.LogError($"Could not load configuration. Exception: {e.Message}");
             }
 
-            return CreateDefaultConfiguration();
+            return null;
         }
 
+
+        private static List<FlatKeyConfiguration> GetFlatConfiguration(StreamDeckConfiguration configuration)
+        {
+            var flatConfiguration = (
+                from profile in configuration.Profiles
+                from page in profile.Pages
+                from key in page.Keys
+                select new FlatKeyConfiguration(key, page, profile)
+            ).ToList();
+
+            return flatConfiguration;
+        }
+
+        public static bool DoesConfigurationFileExists()
+        {
+            return File.Exists(ConfigFile);
+        }
 
         public static StreamDeckConfiguration CreateDefaultConfiguration()
         {

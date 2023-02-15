@@ -1,4 +1,5 @@
 ﻿using CodeDeck.PluginSystem;
+using CodeDeck.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,7 @@ namespace CodeDeck
 
                     services.AddSingleton<ConfigurationProvider>();
                     services.AddSingleton<PluginLoader>();
+                    services.AddSingleton<ProcessMonitor>();
                     services.AddSingleton<StreamDeckManager>();
 
                     services.AddHostedService<Worker>();
