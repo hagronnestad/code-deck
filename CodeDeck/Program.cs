@@ -3,6 +3,9 @@ using CodeDeck.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System;
+using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +17,9 @@ namespace CodeDeck
 
         public static async Task Main(string[] args)
         {
+            var cwd = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            if (cwd is not null) Directory.SetCurrentDirectory(cwd);
+
             using IHost host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices((_, services) =>
                 {
@@ -37,7 +43,7 @@ namespace CodeDeck
                     //logging.AddEventLog();
                 })
                 .Build();
-
+            
             await host.RunAsync(cts.Token);
         }
 
