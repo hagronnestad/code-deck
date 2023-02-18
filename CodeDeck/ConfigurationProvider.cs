@@ -171,7 +171,7 @@ namespace CodeDeck
                                         Index = 2,
                                         Plugin = "Runner",
                                         Tile = "OpenWebsiteTile",
-                                        Image = "Image/icon.png",
+                                        Image = "Images/icon.png",
                                         ImagePadding = 5,
                                         Settings = new() {
                                             { "Url", "https://heinandre.no/code-deck" }
