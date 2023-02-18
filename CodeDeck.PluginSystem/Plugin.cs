@@ -1,6 +1,7 @@
 using CodeDeck.PluginAbstractions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
@@ -157,7 +158,11 @@ namespace CodeDeck.PluginSystem
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, platform: Platform.AnyCpu));
 
             // Try to compile and emit assembly and PDB 
-            var emitResult = compilation.Emit(AssemblyFileName, PdbFileName);
+            using var assemblyStream = File.Create(AssemblyFileName);
+            using var pdbStream = File.Create(PdbFileName);
+            var emitResult = compilation.Emit(assemblyStream, pdbStream,
+                options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
+
             if (!emitResult.Success)
             {
                 // When the compilation fails, it leaves behind zero byte files, remove them
