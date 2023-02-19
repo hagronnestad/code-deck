@@ -141,17 +141,17 @@ Full path to configuration file:
 {
   "DevicePath": null,
   "Brightness": 100,
-  "FallbackFont": "Segoe UI Emoji",
+  "FallbackFont": "Twemoji Mozilla",
   "Profiles": []
 }
 ```
 
-| Field        | Values           | Description                                                                                                              |
-| ------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| DevicePath   | `null`           | Path to a specific device, can be used in the case of multiple connected devices.                                        |
-| Brightness   | `100`            | Brightness in percent.                                                                                                   |
-| FallbackFont | `Segoe UI Emoji` | Font to use if a glyph is not available in the `Key`-font. Set this to an emoji or icon font to easily use icons/emojis. |
-| Profiles     | `Profile[]`      | An array of `Profile` objects.                                                                                           |
+| Field        | Values            | Description                                                                                                              |
+| ------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| DevicePath   | `null`            | Path to a specific device, can be used in the case of multiple connected devices.                                        |
+| Brightness   | `100`             | Brightness in percent.                                                                                                   |
+| FallbackFont | `Twemoji Mozilla` | Font to use if a glyph is not available in the `Key`-font. Set this to an emoji or icon font to easily use icons/emojis. |
+| Profiles     | `Profile[]`       | An array of `Profile` objects.                                                                                           |
 
 
 #### Profile
@@ -259,20 +259,27 @@ The `Key.Image` field can be set to the path of an image file. The image will be
 
 
 ### Emojis
-As an alternative to supplying an image, you can use emojis. Use the `Text` field to specify one or more emojis. To use emojis, you have to specify a font that supports them. On Windows you can set the `Font` field to [`Segoe UI Emoji`](https://learn.microsoft.com/en-us/typography/font-list/segoe-ui-emoji).
 
-You can also use other third party emoji fonts.
+As an alternative to supplying an image, you can use emojis. **Code Deck** has built in support for emojis through the bundled Twemoji Mozilla font ([`Twemoji.Mozilla.ttf`](https://github.com/mozilla/twemoji-colr)).
 
-Adjust the `FontSize` field for a bigger *"icon"*.
+Use the `Text` field to specify one or more emojis. Adjust the `FontSize` field for a bigger *"icon"*.
 
 Example:
 ```json
 {
   "Text": "🔒",
-  "Font": "Segoe UI Emoji",
   "FontSize": 50
 }
 ```
+
+You can also use other third party emoji fonts. The font must support the `COLR`-format. The `COLR`-format is the only format currently supported by `SixLabors.Fonts` which is the font library **Code Deck** uses.
+
+On Windows you can use [`Segoe UI Emoji`](https://learn.microsoft.com/en-us/typography/font-list/segoe-ui-emoji) for example.
+
+***⚠️ Some of the most known Emoji fonts DO NOT support the `COLR`-format and will not work with Code Deck. A few known examples are listed below:***
+
+- Noto Color Emoji
+- OpenMoji
 
 ### Icon Fonts
 
@@ -360,6 +367,10 @@ Read about plugin development [here!](CodeDeck.Plugins/Plugins/)
 **Code Deck** makes heavy use of the following great libraries:
 - [StreamDeckSharp](https://github.com/OpenMacroBoard/StreamDeckSharp)
 - [ImageSharp](https://github.com/SixLabors/ImageSharp)
+
+**Code Deck** uses the following font for built in emoji support:
+- [Twitter Emoji (Twemoji)](https://github.com/twitter/twemoji)
+- [Twemoji Mozilla (Twemoji font in COLR/CPAL layered format)](https://github.com/mozilla/twemoji-colr)
 
 
 ## Disclaimer

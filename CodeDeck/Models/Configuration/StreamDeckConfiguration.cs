@@ -11,8 +11,7 @@ namespace CodeDeck.Models.Configuration
 
         public int Brightness { get; set; } = 75;
 
-
-        public string? FallbackFont { get; set; } = "Segoe UI Emoji";
+        public string? FallbackFont { get; set; } = "Twemoji Mozilla";
 
         public List<Profile> Profiles { get; set; } = new();
     }

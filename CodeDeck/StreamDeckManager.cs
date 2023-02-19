@@ -1,4 +1,4 @@
-﻿using CodeDeck.Models;
+using CodeDeck.Models;
 using CodeDeck.Models.Configuration;
 using CodeDeck.PluginSystem;
 using CodeDeck.Services;
@@ -48,6 +48,7 @@ namespace CodeDeck
             _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
 
             _fontCollection.AddSystemFonts();
+            _fontCollection.Add("Fonts/Twemoji.Mozilla.ttf");
             _fontCollection.Add("Fonts/Ubuntu-Bold.ttf");
             _fontCollection.Add("Fonts/Ubuntu-BoldItalic.ttf");
             _fontCollection.Add("Fonts/Ubuntu-Italic.ttf");
