@@ -18,6 +18,7 @@ The `Code`-part of the name is a reference to how configuration and plugins work
 - [Code Deck](#code-deck)
   - [Description](#description)
   - [Table of Contents](#table-of-contents)
+  - [Features](#features)
   - [Concept](#concept)
     - [Key](#key)
     - [Page](#page)
@@ -42,6 +43,18 @@ The `Code`-part of the name is a reference to how configuration and plugins work
     - [Tested Stream Decks](#tested-stream-decks)
   - [Attributions](#attributions)
   - [Disclaimer](#disclaimer)
+
+
+## Features
+- Plugin Based Design
+- File Based Configuration
+- Cross Platform
+- Unlimited Pages
+- Multiple Profiles
+- Lock Screen Profile
+- Change Profile/Page Based On Running Program
+- Highly Configurable
+- Emoji Support
 
 
 ## Concept
