@@ -350,6 +350,13 @@ namespace CodeDeck
 
             if (profile != null && page != null)
             {
+                // Prevent navigating to the same page as the current page
+                if (_navigationStack.Count > 0)
+                {
+                    var currentPage = _navigationStack.Peek();
+                    if (currentPage.profileName == profile.Name && currentPage.pageName == page.Name) return;
+                }
+
                 _navigationStack.Push((profile.Name, page.Name));
                 RefreshPage();
             }
