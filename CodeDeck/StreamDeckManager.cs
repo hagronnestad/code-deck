@@ -439,7 +439,7 @@ namespace CodeDeck
             var i = new Image<Rgba32>(_streamDeck.Keys.KeySize, _streamDeck.Keys.KeySize);
 
             // Add background color
-            i.Mutate(x => x.BackgroundColor(bgColor));
+            i.Mutate(x => x.Clear(bgColor));
 
             // Add image
             if (image != null)
