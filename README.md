@@ -347,6 +347,7 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 |                                    | [GpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#gpuusagetile)       | 🪟          |                             |
 | Runner                             | [RunTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#runtile)                              | 🪟🐧         |                             |
 |                                    | [OpenWebsiteTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#openwebsitetile)              | 🪟🐧         |                             |
+| SteelSeriesRival3Wireless          | [BatteryTile](CodeDeck.Plugins/Plugins/SteelSeriesRival3Wireless/README.md)               | 🪟🐧*        | *Linux support is untested. |
 | Template                           | TemplateTileOne                                                                           | 🪟🐧         |                             |
 |                                    | TemplateTileTwo                                                                           | 🪟🐧         |                             |
 | KeyboardSimulator                  | TyperTile                                                                                 | 🪟          |                             |

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
@@ -25,6 +25,7 @@
     <Compile Remove="Plugins\NetworkTools\ExternalIpTile.cs" />
     <Compile Remove="Plugins\PerformanceCounters\PerformanceCounters.cs" />
     <Compile Remove="Plugins\Runner\Runner.cs" />
+    <Compile Remove="Plugins\SteelSeriesRival3Wireless\SteelSeriesRival3Wireless.cs" />
     <Compile Remove="Plugins\Template\Template.cs" />
     <Compile Remove="Plugins\Weather\YrImageTile.cs" />
     <Compile Remove="Plugins\WebRequest\WebRequest.cs" />
@@ -44,6 +45,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\Counter\Counter.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\SteelSeriesRival3Wireless\SteelSeriesRival3Wireless.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs">
