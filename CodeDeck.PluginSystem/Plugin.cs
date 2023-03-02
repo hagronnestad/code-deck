@@ -166,6 +166,8 @@ namespace CodeDeck.PluginSystem
             if (!emitResult.Success)
             {
                 // When the compilation fails, it leaves behind zero byte files, remove them
+                assemblyStream.Close();
+                pdbStream.Close();
                 if (File.Exists(AssemblyFileName)) File.Delete(AssemblyFileName);
                 if (File.Exists(PdbFileName)) File.Delete(PdbFileName);
 
