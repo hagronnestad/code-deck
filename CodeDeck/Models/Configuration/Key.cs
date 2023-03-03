@@ -34,6 +34,7 @@ namespace CodeDeck.Models.Configuration
 
         public string? BackgroundColor { get; set; }
         public string? Image { get; set; }
+        public bool DisableTileImage { get; set; } = false;
         public int? ImagePadding { get; set; }
         public int? ImageOffsetX { get; set; }
         public int? ImageOffsetY { get; set; }

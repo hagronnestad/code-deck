@@ -442,7 +442,7 @@ namespace CodeDeck
             float lineSpacing = keyWrapper.Key.LineSpacing ?? 1.1f;
             Color textColor = keyWrapper.Key.TextColorAsColor ?? keyWrapper.Tile?.TextColor ?? Color.White;
             Color bgColor = keyWrapper.Key.BackgroundColorAsColor ?? keyWrapper.Tile?.BackgroundColor ?? Color.Transparent;
-            Image? image = keyWrapper.Image ?? keyWrapper.Tile?.Image;
+            Image? image = keyWrapper.Image ?? (keyWrapper.Key.DisableTileImage ? null : keyWrapper.Tile?.Image);
             int imagePadding = keyWrapper.Key.ImagePadding ?? keyWrapper.Tile?.ImagePadding ?? 0;
             bool? indicator = keyWrapper.Tile?.ShowIndicator;
             Color indicatorColor = keyWrapper.Key.ActivityIndicatorColorAsColor ?? keyWrapper.Tile?.IndicatorColor ?? Color.Yellow;

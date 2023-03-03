@@ -222,6 +222,7 @@ Full path to configuration file:
   "FontItalic": false,
   "BackgroundColor": "#000000",
   "Image": "image.png",
+  "DisableTileImage": true,
   "ImagePadding": 5,
   "ImageOffsetX": 0,
   "ImageOffsetY": 0,
@@ -254,6 +255,7 @@ Full path to configuration file:
 | FontItalic             | `true` \| `false`                  |                                                                                                                                                       |
 | BackgroundColor        | `"#000000"`                        | Color of the background color of the key.                                                                                                             |
 | Image                  | `filename.png`                     | Path to an image file. The image will be shown on the key.                                                                                            |
+| DisableTileImage       | `true` \| `false`                  | Setting this to `true` disables any image set by a Plugin Tile.                                                                                       |
 | ImagePadding           | `5`                                | A padding to apply to the image. Very useful when trying to match all image sizes.                                                                    |
 | ImageOffsetX           | `0`                                | The offset to add to the X-position of the image.                                                                                                     |
 | ImageOffsetY           | `-5`                               | The offset to add to the Y-position of the image.                                                                                                     |
