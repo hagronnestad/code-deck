@@ -1,7 +1,8 @@
-using CodeDeck.Models.Configuration;
+﻿using CodeDeck.Models.Configuration;
 using CodeDeck.PluginAbstractions;
 using CodeDeck.PluginSystem;
 using Microsoft.Extensions.Logging;
+using OpenMacroBoard.SDK;
 using SixLabors.ImageSharp;
 using System;
 using System.Threading;
@@ -22,6 +23,16 @@ namespace CodeDeck
         public CancellationTokenSource CancellationTokenSource { get; } = new();
 
         public Image? Image { get; set; }
+
+        /// <summary>
+        /// Cached composed key bitmap image
+        /// </summary>
+        public KeyBitmap? CachedComposedKeyBitmapImage { get; set; }
+
+        /// <summary>
+        /// Indicates if the wrapped key is currently being shown
+        /// </summary>
+        public bool IsShowing { get; set; } = false;
 
         public event EventHandler<KeyWrapper>? Updated;
 

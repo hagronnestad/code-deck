@@ -1,4 +1,3 @@
-using CodeDeck.Models;
 using CodeDeck.Models.Configuration;
 using CodeDeck.PluginSystem;
 using CodeDeck.Services;
@@ -30,6 +29,7 @@ namespace CodeDeck
         private readonly List<KeyWrapper> _keyWrappers = new();
         private readonly FontCollection _fontCollection = new();
         private readonly Stack<(string profileName, string pageName)> _navigationStack = new();
+        private (string profileName, string pageName) _currentPage = new();
         private bool _applyingConfiguration = false;
 
 
@@ -143,12 +143,8 @@ namespace CodeDeck
 
         private void StreamDeck_KeyStateChanged(object? sender, KeyEventArgs e)
         {
-            if (_navigationStack.Count == 0) return;
-            var (profileName, pageName) = _navigationStack.Peek();
-
             var keyWrapper = _keyWrappers
-                .Where(x => x.Profile.Name == profileName)
-                .Where(x => x.Page.Name == pageName)
+                .Where(x => x.IsShowing)
                 .Where(x => x.Key.Index == e.Key)
                 .FirstOrDefault();
 
@@ -199,13 +195,11 @@ namespace CodeDeck
             switch (e.Reason)
             {
                 case SessionSwitchReason.SessionLock:
-                    _navigationStack.Push((lockScreenProfile.Name, lockScreenPage.Name));
-                    RefreshPage();
+                    GotoPage(lockScreenProfile.Name, lockScreenPage.Name);
                     break;
 
                 case SessionSwitchReason.SessionUnlock:
-                    _navigationStack.Pop();
-                    RefreshPage();
+                    GotoPreviousPage();
                     break;
 
                 default:
@@ -264,12 +258,10 @@ namespace CodeDeck
                 return;
             }
 
-            // Navigate to first page if no page exists on the navigation stack
-            if (_navigationStack.Count == 0) _navigationStack.Push((profile.Name, page.Name));
-
             await CreateKeyWrappers();
 
-            RefreshPage();
+            // Navigate to first page if no page exists on the navigation stack
+            if (_navigationStack.Count == 0) GotoPage(profile.Name, page.Name);
         }
 
         public async Task CreateKeyWrappers()
@@ -347,39 +339,53 @@ namespace CodeDeck
         {
             var profile = _configurationProvider.LoadedConfiguration.Profiles.FirstOrDefault(x => x.Name == profileName);
             var page = profile?.Pages.FirstOrDefault(x => x.Name == pageName);
+            if (profile == null || page == null) return;
 
-            if (profile != null && page != null)
+            // Prevent navigating to the same page as the current page
+            if (_navigationStack.Count > 0)
             {
-                // Prevent navigating to the same page as the current page
-                if (_navigationStack.Count > 0)
-                {
-                    var currentPage = _navigationStack.Peek();
-                    if (currentPage.profileName == profile.Name && currentPage.pageName == page.Name) return;
-                }
-
-                _navigationStack.Push((profile.Name, page.Name));
-                RefreshPage();
+                if (_currentPage.profileName == profile.Name && _currentPage.pageName == page.Name) return;
             }
+
+            // Update navigation stack and current page
+            _navigationStack.Push((profile.Name, page.Name));
+            _currentPage = (profile.Name, page.Name);
+
+            // Update IsShowing property
+            _keyWrappers.ForEach((k) => {
+                k.IsShowing = k.Profile.Name == profileName && k.Page.Name == pageName;
+            });
+
+            RefreshPage();
         }
 
         public void RefreshPage()
         {
             _streamDeck.ClearKeys();
-            var (profileName, pageName) = _navigationStack.Peek();
 
-            foreach (var keyWrapper in _keyWrappers
-                .Where(x => x.Profile.Name == profileName)
-                .Where(x => x.Page.Name == pageName))
+            var keyWrappersForCurrentPage = _keyWrappers.Where(x => x.IsShowing);
+
+            if (keyWrappersForCurrentPage is null || !keyWrappersForCurrentPage.Any()) return;
+
+            foreach (var keyWrapper in keyWrappersForCurrentPage)
             {
-                UpdateKeyBitmap(keyWrapper);
+                keyWrapper.CachedComposedKeyBitmapImage ??= CreateKeyBitmap(keyWrapper);
+                _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index, keyWrapper.CachedComposedKeyBitmapImage);
             }
         }
 
         public void GotoPreviousPage()
         {
+            // Return if there is no page to navigate back to
             if (_navigationStack.Count < 2) return;
+
+            // Pop the current page of the navigation stack
             _navigationStack.Pop();
+
+            // Pop the previous page of the navigation stack
             var (profileName, pageName) = _navigationStack.Pop();
+
+            // Navigate to the previous page
             GotoPage(profileName, pageName);
         }
 
@@ -390,11 +396,25 @@ namespace CodeDeck
         /// <param name="keyWrapper"></param>
         private void KeyWrapper_Updated(object? sender, KeyWrapper keyWrapper)
         {
-            if (_navigationStack.Count == 0) return;
-            var (profileName, pageName) = _navigationStack.Peek();
-            if (profileName != keyWrapper.Profile.Name || pageName != keyWrapper.Page.Name) return;
+            if (keyWrapper is null) return;
 
-            UpdateKeyBitmap(keyWrapper);
+            // Only update the key bitmap if the key is currently showing
+            // This optimizes resource usage by keys that are not currently showing
+            // We call CreateKeyBitmap on demand when navigating to a new page instead
+            if (keyWrapper.IsShowing)
+            {
+                keyWrapper.CachedComposedKeyBitmapImage = CreateKeyBitmap(keyWrapper);
+            }
+
+            // It's intended to check IsShowing again here
+            // The key might not be showing anymore if a page navigation happened while
+            // waiting for creation of the new key bitmap, in rare occations that might
+            // lead to setting the key bitmap while on the wrong page
+            // TODO: Fix with locking?
+            if (keyWrapper.IsShowing)
+            {
+                _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index, keyWrapper.CachedComposedKeyBitmapImage);
+            }
         }
 
         public void ClearKeys()
@@ -402,17 +422,15 @@ namespace CodeDeck
             _streamDeck?.ClearKeys();
         }
 
-        public void UpdateKeyBitmap(KeyWrapper keyWrapper)
+        public KeyBitmap CreateKeyBitmap(KeyWrapper keyWrapper)
         {
-            _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index,
-                KeyBitmap.Create.FromImageSharpImage(CreateTileBitmap(keyWrapper)));
+            return KeyBitmap.Create.FromImageSharpImage(CreateTileBitmap(keyWrapper));
+
         }
 
         private Image CreateTileBitmap(KeyWrapper keyWrapper)
         {
             // TODO: This method is a mess and should be massively optimized
-            // - KeyWrapper should cache the key image and use the cached version on page refresh
-            // - The created bitmap object (`i`) should probably be reused when redrawing
             // - Fonts should not be recreated on every draw
 
             // Get customized values, Key (set by user) values override Tile values, set default value if needed
