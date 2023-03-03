@@ -1,4 +1,4 @@
-﻿using CodeDeck.PluginSystem;
+using CodeDeck.PluginSystem;
 using CodeDeck.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,7 +17,7 @@ namespace CodeDeck
 
         public static async Task Main(string[] args)
         {
-            var cwd = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            var cwd = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location ?? Directory.GetCurrentDirectory());
             if (cwd is not null) Directory.SetCurrentDirectory(cwd);
 
             using IHost host = Host.CreateDefaultBuilder(args)
