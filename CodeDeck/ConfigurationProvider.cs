@@ -1,4 +1,4 @@
-using CodeDeck.Models;
+﻿using CodeDeck.Models;
 using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -27,15 +27,7 @@ namespace CodeDeck
         public static readonly string ConfigFolder;
         public static readonly string ConfigFile;
 
-        public StreamDeckConfiguration LoadedConfiguration
-        {
-            get { return _loadedConfiguration; }
-            set
-            {
-                _loadedConfiguration = value;
-                _loadedFlatConfiguration = GetFlatConfiguration(_loadedConfiguration);
-            }
-        }
+        public StreamDeckConfiguration LoadedConfiguration => _loadedConfiguration;
 
         public List<FlatKeyConfiguration> LoadedFlatConfiguration => _loadedFlatConfiguration;
 
@@ -56,7 +48,9 @@ namespace CodeDeck
                 Directory.CreateDirectory(ConfigFolder);
             }
 
-            LoadAndFlattenConfiguration();
+            // Load configuration from file or load a default configuration
+            _loadedConfiguration = LoadConfiguration() ?? CreateDefaultConfiguration();
+            _loadedFlatConfiguration = GetFlatConfiguration(_loadedConfiguration);
 
             // Set up file system watcher
             _fileSystemWatcher = new FileSystemWatcher(ConfigFolder)
@@ -74,15 +68,13 @@ namespace CodeDeck
         {
             // TODO: Wait for file access ready in a better way
             await Task.Delay(500); // Wait for file to finish writing
-            LoadAndFlattenConfiguration();
-            ConfigurationChanged?.Invoke(this, e);
-        }
 
-        private void LoadAndFlattenConfiguration()
-        {
             // Load configuration from file or load a default configuration
             _loadedConfiguration = LoadConfiguration() ?? CreateDefaultConfiguration();
             _loadedFlatConfiguration = GetFlatConfiguration(_loadedConfiguration);
+
+            // Invoke event handlers
+            ConfigurationChanged?.Invoke(this, e);
         }
 
         private StreamDeckConfiguration? LoadConfiguration()
