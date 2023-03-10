@@ -12,7 +12,6 @@ namespace CodeDeck.Models.Configuration
     {
         public const string KEY_TYPE_NORMAL = "Normal";
         public const string KEY_TYPE_GO_BACK = "Back";
-        public const string KEY_TYPE_GOTO_PAGE = "Page";
 
         /// <summary>
         /// The Key index on the deck

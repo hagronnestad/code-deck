@@ -152,15 +152,6 @@ namespace CodeDeck
 
             switch (keyWrapper.Key.KeyType)
             {
-                case Key.KEY_TYPE_GOTO_PAGE:
-                    if (!e.IsDown)
-                    {
-                        if (keyWrapper.Key.Profile == null || keyWrapper.Key.Page == null) return;
-                        GotoPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
-                        break;
-                    }
-                    break;
-
                 case Key.KEY_TYPE_GO_BACK:
                     if (!e.IsDown) GotoPreviousPage();
                     break;
@@ -168,6 +159,13 @@ namespace CodeDeck
                 case Key.KEY_TYPE_NORMAL:
                     if (e.IsDown) keyWrapper.HandleKeyPressDown();
                     if (!e.IsDown) keyWrapper.HandleKeyPressUp();
+
+                    // Perform navigation if a profile and page has been set
+                    if (!e.IsDown && keyWrapper.Key.Profile != null && keyWrapper.Key.Page != null)
+                    {
+                        GotoPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
+                    }
+
                     break;
 
                 default:
@@ -446,7 +444,7 @@ namespace CodeDeck
             int imagePadding = keyWrapper.Key.ImagePadding ?? keyWrapper.Tile?.ImagePadding ?? 0;
             bool? indicator = keyWrapper.Tile?.ShowIndicator;
             Color indicatorColor = keyWrapper.Key.ActivityIndicatorColorAsColor ?? keyWrapper.Tile?.IndicatorColor ?? Color.Yellow;
-            bool? folderIndicator = keyWrapper.Key.ShowFolderIndicator ?? (keyWrapper.Key.KeyType == Key.KEY_TYPE_GOTO_PAGE);
+            bool? folderIndicator = keyWrapper.Key.ShowFolderIndicator ?? (keyWrapper.Key.Profile != null && keyWrapper.Key.Page != null);
             Color folderIndicatorColor = keyWrapper.Key.FolderIndicatorColorAsColor ?? Color.Blue;
             int textOffsetX = keyWrapper.Key.TextOffsetX ?? 0;
             int textOffsetY = keyWrapper.Key.TextOffsetY ?? 0;

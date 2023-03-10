@@ -1,4 +1,4 @@
-﻿using CodeDeck.Models;
+using CodeDeck.Models;
 using CodeDeck.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -193,7 +193,6 @@ namespace CodeDeck
                                     new Key()
                                     {
                                         Index = 13,
-                                        KeyType = Key.KEY_TYPE_GOTO_PAGE,
                                         Profile = "DefaultProfile",
                                         Page = "Page2",
                                         Text = "GO TO\nPAGE 2",
