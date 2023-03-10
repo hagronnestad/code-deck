@@ -12,6 +12,7 @@ namespace CodeDeck.Models.Configuration
         public string Name { get; set; } = PAGE_DEFAULT_NAME;
 
         public string? ProcessStartedTrigger { get; set; }
+        public bool ProcessStartedTriggerNavigatePreviousOnExit { get; set; } = false;
 
         public List<Key> Keys { get; set; } = new();
     }

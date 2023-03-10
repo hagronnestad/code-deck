@@ -73,6 +73,7 @@ namespace CodeDeck
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
 
             _processMonitor.ProcessStarted += ProcessMonitor_ProcessStarted;
+            _processMonitor.ProcessExited += ProcessMonitor_ProcessExited;
 
             // Handle Lock/UnLock on Windows
             if (OperatingSystem.IsWindows())
@@ -89,6 +90,24 @@ namespace CodeDeck
             if (flatKeyConfiguration is null) return;
 
             NavigateToPage(flatKeyConfiguration.Profile.Name, flatKeyConfiguration.Page.Name);
+        }
+
+        private void ProcessMonitor_ProcessExited(object? sender, string e)
+        {
+            if (_currentPage is null) return;
+
+            var flatKeyConfiguration = _configurationProvider.LoadedFlatConfiguration
+                .FirstOrDefault(x => x.Page.ProcessStartedTrigger?.ToLower() == e);
+            if (flatKeyConfiguration is null) return;
+
+            // If ProcessStartedTriggerNavigatePreviousOnExit is true and the current page is the
+            // same page that was navigated to by ProcessStartedTrigger then navigate to the previous page
+            if (flatKeyConfiguration.Page.ProcessStartedTriggerNavigatePreviousOnExit
+                && _currentPage.ProfileName == flatKeyConfiguration.Profile.Name
+                && _currentPage.PageName == flatKeyConfiguration.Page.Name)
+            {
+                NavigateToPreviousPage();
+            }
         }
 
         private IMacroBoard? OpenStreamDeck()
