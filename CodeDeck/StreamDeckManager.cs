@@ -21,6 +21,8 @@ namespace CodeDeck
 {
     public class StreamDeckManager
     {
+        private record NavigationItem(string ProfileName, string PageName);
+
         private readonly ILogger<StreamDeckManager> _logger;
         private readonly ConfigurationProvider _configurationProvider;
         private readonly ProcessMonitor _processMonitor;
@@ -28,8 +30,8 @@ namespace CodeDeck
         private readonly PluginLoader _pluginLoader;
         private readonly List<KeyWrapper> _keyWrappers = new();
         private readonly FontCollection _fontCollection = new();
-        private readonly Stack<(string profileName, string pageName)> _navigationStack = new();
-        private (string profileName, string pageName) _currentPage = new();
+        private readonly Stack<NavigationItem> _navigationStack = new();
+        private NavigationItem? _currentPage;
         private bool _applyingConfiguration = false;
 
 
@@ -66,12 +68,11 @@ namespace CodeDeck
                 Environment.Exit(1);
             }
 
-            _processMonitor.ProcessStarted += ProcessMonitor_ProcessStarted;
-            _processMonitor.Start();
-
             _streamDeck = sd;
             _streamDeck.ConnectionStateChanged += StreamDeck_ConnectionStateChanged;
             _streamDeck.KeyStateChanged += StreamDeck_KeyStateChanged;
+
+            _processMonitor.ProcessStarted += ProcessMonitor_ProcessStarted;
 
             // Handle Lock/UnLock on Windows
             if (OperatingSystem.IsWindows())
@@ -87,7 +88,7 @@ namespace CodeDeck
 
             if (flatKeyConfiguration is null) return;
 
-            GotoPage(flatKeyConfiguration.Profile.Name, flatKeyConfiguration.Page.Name);
+            NavigateToPage(flatKeyConfiguration.Profile.Name, flatKeyConfiguration.Page.Name);
         }
 
         private IMacroBoard? OpenStreamDeck()
@@ -126,7 +127,7 @@ namespace CodeDeck
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception in '{nameof(ApplyConfigurationAsync)}'. Message: '{e.Message}'. This may indicate that an invalid '{nameof(StreamDeckConfiguration.DevicePath)}' was specified.");
+                _logger.LogError($"Exception in '{nameof(ApplyConfiguration)}'. Message: '{e.Message}'. This may indicate that an invalid '{nameof(StreamDeckConfiguration.DevicePath)}' was specified.");
                 return null;
             }
 
@@ -136,7 +137,6 @@ namespace CodeDeck
         private void StreamDeck_ConnectionStateChanged(object? sender, ConnectionEventArgs e)
         {
             if (_streamDeck is null) return;
-            _streamDeck.ClearKeys();
             _streamDeck.SetBrightness((byte)_configurationProvider.LoadedConfiguration.Brightness);
             RefreshPage();
         }
@@ -153,7 +153,7 @@ namespace CodeDeck
             switch (keyWrapper.Key.KeyType)
             {
                 case Key.KEY_TYPE_GO_BACK:
-                    if (!e.IsDown) GotoPreviousPage();
+                    if (!e.IsDown) NavigateToPreviousPage();
                     break;
 
                 case Key.KEY_TYPE_NORMAL:
@@ -163,7 +163,7 @@ namespace CodeDeck
                     // Perform navigation if a profile and page has been set
                     if (!e.IsDown && keyWrapper.Key.Profile != null && keyWrapper.Key.Page != null)
                     {
-                        GotoPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
+                        NavigateToPage(keyWrapper.Key.Profile, keyWrapper.Key.Page);
                     }
 
                     break;
@@ -193,11 +193,11 @@ namespace CodeDeck
             switch (e.Reason)
             {
                 case SessionSwitchReason.SessionLock:
-                    GotoPage(lockScreenProfile.Name, lockScreenPage.Name);
+                    NavigateToPage(lockScreenProfile.Name, lockScreenPage.Name);
                     break;
 
                 case SessionSwitchReason.SessionUnlock:
-                    GotoPreviousPage();
+                    NavigateToPreviousPage();
                     break;
 
                 default:
@@ -215,16 +215,25 @@ namespace CodeDeck
             if (_applyingConfiguration) return;
             _applyingConfiguration = true;
 
-            await ClearKeyWrappers();
-            await ApplyConfigurationAsync();
+            _processMonitor.Stop();
+            await DestroyKeyWrappers();
+            await ApplyConfiguration();
+            _processMonitor.Start();
 
             _applyingConfiguration = false;
         }
 
-        public async Task ApplyConfigurationAsync()
+        public async Task Start()
+        {
+            await ApplyConfiguration();
+            _processMonitor.Start();
+        }
+
+        public async Task ApplyConfiguration()
         {
             ClearKeys();
 
+            // Show Code Deck icon while applying configuration
             _streamDeck?.SetKeyBitmap(_streamDeck.Keys.CountX / 2,
                 KeyBitmap.Create.FromImageSharpImage(Image.Load("Images/icon.png")));
 
@@ -258,8 +267,16 @@ namespace CodeDeck
 
             await CreateKeyWrappers();
 
-            // Navigate to first page if no page exists on the navigation stack
-            if (_navigationStack.Count == 0) GotoPage(profile.Name, page.Name);
+            if (_navigationStack.Count == 0)
+            {
+                // Navigate to first page if no page exists on the navigation stack
+                NavigateToPage(profile.Name, page.Name);
+            }
+            else
+            {
+                // Refresh page when live reloading configuration
+                RefreshPage();
+            }
         }
 
         public async Task CreateKeyWrappers()
@@ -288,13 +305,12 @@ namespace CodeDeck
             // Bind all event handlers last to prevent unnecessary
             // key updates during init and draw all keys at the same time
             keyWrappers.ForEach(x => x.Updated += KeyWrapper_Updated);
-            RefreshPage();
 
             // Keep wrappers for later
             _keyWrappers.AddRange(keyWrappers);
         }
 
-        public async Task ClearKeyWrappers()
+        public async Task DestroyKeyWrappers()
         {
             // Remove all event handlers and cancel all running tasks
             _keyWrappers.ForEach(keyWrapper =>
@@ -333,46 +349,29 @@ namespace CodeDeck
             return null;
         }
 
-        public void GotoPage(string profileName, string pageName)
+
+        public void NavigateToPage(string profileName, string pageName)
         {
+            // Make sure the profile and page exists in the configuration
             var profile = _configurationProvider.LoadedConfiguration.Profiles.FirstOrDefault(x => x.Name == profileName);
             var page = profile?.Pages.FirstOrDefault(x => x.Name == pageName);
             if (profile == null || page == null) return;
 
             // Prevent navigating to the same page as the current page
-            if (_navigationStack.Count > 0)
+            if (_currentPage is not null)
             {
-                if (_currentPage.profileName == profile.Name && _currentPage.pageName == page.Name) return;
+                if (_currentPage.ProfileName == profile.Name && _currentPage.PageName == page.Name) return;
             }
 
             // Update navigation stack and current page
-            _navigationStack.Push((profile.Name, page.Name));
-            _currentPage = (profile.Name, page.Name);
-
-            // Update IsShowing property
-            _keyWrappers.ForEach((k) => {
-                k.IsShowing = k.Profile.Name == profileName && k.Page.Name == pageName;
-            });
+            var navigationItem = new NavigationItem(profile.Name, page.Name);
+            _navigationStack.Push(navigationItem);
+            _currentPage = navigationItem;
 
             RefreshPage();
         }
 
-        public void RefreshPage()
-        {
-            _streamDeck.ClearKeys();
-
-            var keyWrappersForCurrentPage = _keyWrappers.Where(x => x.IsShowing);
-
-            if (keyWrappersForCurrentPage is null || !keyWrappersForCurrentPage.Any()) return;
-
-            foreach (var keyWrapper in keyWrappersForCurrentPage)
-            {
-                keyWrapper.CachedComposedKeyBitmapImage ??= CreateKeyBitmap(keyWrapper);
-                _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index, keyWrapper.CachedComposedKeyBitmapImage);
-            }
-        }
-
-        public void GotoPreviousPage()
+        public void NavigateToPreviousPage()
         {
             // Return if there is no page to navigate back to
             if (_navigationStack.Count < 2) return;
@@ -381,10 +380,31 @@ namespace CodeDeck
             _navigationStack.Pop();
 
             // Pop the previous page of the navigation stack
-            var (profileName, pageName) = _navigationStack.Pop();
+            var previousPage = _navigationStack.Pop();
 
             // Navigate to the previous page
-            GotoPage(profileName, pageName);
+            NavigateToPage(previousPage.ProfileName, previousPage.PageName);
+        }
+
+        public void RefreshPage()
+        {
+            _streamDeck.ClearKeys();
+            
+            if (_currentPage is null) return;
+
+            // Update IsShowing property
+            _keyWrappers.ForEach((k) => {
+                k.IsShowing = k.Profile.Name == _currentPage.ProfileName && k.Page.Name == _currentPage.PageName;
+            });
+
+            var keyWrappersForCurrentPage = _keyWrappers.Where(x => x.IsShowing);
+            if (keyWrappersForCurrentPage is null || !keyWrappersForCurrentPage.Any()) return;
+
+            foreach (var keyWrapper in keyWrappersForCurrentPage)
+            {
+                keyWrapper.CachedComposedKeyBitmapImage ??= CreateKeyBitmap(keyWrapper);
+                _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index, keyWrapper.CachedComposedKeyBitmapImage);
+            }
         }
 
         /// <summary>

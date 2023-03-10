@@ -68,7 +68,7 @@ namespace CodeDeck
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _pluginLoader.LoadAllPlugins();
-            await _streamDeckManager.ApplyConfigurationAsync();
+            await _streamDeckManager.Start();
 
             await Task.Delay(-1, stoppingToken);
         }
