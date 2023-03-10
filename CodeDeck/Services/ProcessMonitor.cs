@@ -26,6 +26,11 @@ namespace CodeDeck.Services
             _timer.Enabled = true;
         }
 
+        public void Stop()
+        {
+            _timer.Enabled = false;
+        }
+
         public void Add(string name)
         {
             if (_monitoredProcesses.ContainsKey(name)) return;
