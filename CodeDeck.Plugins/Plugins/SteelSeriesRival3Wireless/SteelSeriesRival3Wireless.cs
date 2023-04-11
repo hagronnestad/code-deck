@@ -21,17 +21,22 @@ public class SteelSeriesRival3Wireless : CodeDeckPlugin
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _device = DeviceList.Local
+            _device = FindDevice();
+
+            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+
+            await Task.CompletedTask;
+        }
+
+        private HidDevice? FindDevice()
+        {
+            return DeviceList.Local
                 .GetHidDevices(0x1038, 0x1830)
                 // Filter to pick the correct endpoint
                 .Where(x => x.GetMaxFeatureReportLength() == 515)
                 .Where(x => x.GetMaxInputReportLength() == 65)
                 .Where(x => x.GetMaxOutputReportLength() == 65)
                 .FirstOrDefault();
-
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
-
-            await Task.CompletedTask;
         }
 
         public override async Task OnTilePressUp(CancellationToken cancellationToken)
@@ -45,7 +50,8 @@ public class SteelSeriesRival3Wireless : CodeDeckPlugin
             {
                 ShowIndicator = true;
 
-                if (_device == null) return;
+                if (_device == null) _device = FindDevice();
+                if (_device == null) throw new ArgumentNullException(nameof(_device));
 
                 HidStream s = _device.Open();
 
