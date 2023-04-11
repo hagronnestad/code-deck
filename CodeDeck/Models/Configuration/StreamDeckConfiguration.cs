@@ -13,6 +13,8 @@ namespace CodeDeck.Models.Configuration
 
         public string? FallbackFont { get; set; } = "Twemoji Mozilla";
 
+        public List<PluginConfiguration> Plugins { get; set; } = new();
+
         public List<Profile> Profiles { get; set; } = new();
     }
 }

@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CodeDeck.PluginAbstractions\CodeDeck.PluginAbstractions.csproj" />
-    <ProjectReference Include="..\CodeDeck.PluginSystem\CodeDeck.PluginSystem.csproj" />
     <ProjectReference Include="..\CodeDeck.Plugins\CodeDeck.Plugins.csproj" />
   </ItemGroup>
 

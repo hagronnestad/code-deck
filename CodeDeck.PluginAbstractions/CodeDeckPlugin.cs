@@ -5,6 +5,6 @@
     /// </summary>
     public abstract class CodeDeckPlugin
     {
-
+        public static Dictionary<string, string>? Settings { get; set; }
     }
 }

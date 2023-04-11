@@ -1,5 +1,4 @@
 using CodeDeck.Models.Configuration;
-using CodeDeck.PluginSystem;
 using CodeDeck.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;

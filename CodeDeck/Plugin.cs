@@ -1,18 +1,24 @@
+using CodeDeck.Models.Configuration;
 using CodeDeck.PluginAbstractions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 
-namespace CodeDeck.PluginSystem
+namespace CodeDeck
 {
     public class Plugin : AssemblyLoadContext
     {
         private readonly ILogger _logger;
+        private readonly PluginConfiguration? _configuration;
 
         /// <summary>
         /// The location of the plugin directory on disk.
@@ -39,9 +45,10 @@ namespace CodeDeck.PluginSystem
         public Type? PluginType { get; set; }
 
 
-        public Plugin(ILogger logger, string pluginDirectory)
+        public Plugin(ILogger logger, string pluginDirectory, PluginConfiguration? configuration)
         {
             _logger = logger;
+            _configuration = configuration;
 
             PluginPath = pluginDirectory;
             Name = Path.GetFileName(pluginDirectory);
@@ -79,6 +86,13 @@ namespace CodeDeck.PluginSystem
             if (PluginType == null)
             {
                 _logger.LogWarning($"<{nameof(Plugin)}.{nameof(Init)}> Assembly; '{Name}' does not contain a valid plugin!");
+                return;
+            }
+
+            // Map Plugin settings if available in the configuration
+            if (_configuration?.Settings != null)
+            {
+                MapSettings(_configuration.Settings, PluginType);
             }
         }
 
@@ -215,20 +229,31 @@ namespace CodeDeck.PluginSystem
                 return null;
             }
 
-            MapSettingsToTile(settings, tileType, tileInstance);
+            if (settings != null)
+            {
+                MapSettings(settings, tileType, tileInstance);
+            }
 
             return tileInstance;
         }
 
-        private void MapSettingsToTile(Dictionary<string, string>? settings, Type tileType, Tile tileInstance)
+        /// <summary>
+        /// This method maps a Dictionary of settings to the relevant properties of a class.
+        /// The destination object might be a static class or a class instance.
+        /// Note to self: This method is not generic because we're working with types loaded at runtime.
+        /// </summary>
+        /// <param name="settings"></param>
+        /// <param name="type"></param>
+        /// <param name="instance"></param>
+        private void MapSettings(Dictionary<string, string>? settings, Type type, object? instance = null)
         {
-            // Assign the raw key settings dictionary to the Tile instance
-            tileInstance.Settings = settings;
+            // Assign the raw key settings dictionary to the instance or static class
+            type.BaseType?.GetProperty("Settings")?.SetValue(instance, settings);
 
-            // Map key settings to Tile properties that are annotated with the SettingAttribute
+            // Map settings to properties that are annotated with the SettingAttribute
 
             // Get all properties with the SettingAttribute
-            var settingProperties = tileType.GetProperties()
+            var settingProperties = type.GetProperties()
                 .Where(x => x.CustomAttributes.Any(ca => ca.AttributeType.Name == nameof(SettingAttribute)))
                 .ToList();
 
@@ -240,14 +265,14 @@ namespace CodeDeck.PluginSystem
                     // Parse string
                     if (p.PropertyType.Name == typeof(string).Name)
                     {
-                        p.SetValue(tileInstance, value);
+                        p.SetValue(instance, value);
                     }
                     // Parse bool
                     else if (p.PropertyType == typeof(bool?) || p.PropertyType == typeof(bool))
                     {
                         if (bool.TryParse(value, out var parsedValue))
                         {
-                            p.SetValue(tileInstance, parsedValue);
+                            p.SetValue(instance, parsedValue);
                         }
                     }
                     // Parse int
@@ -255,7 +280,7 @@ namespace CodeDeck.PluginSystem
                     {
                         if (int.TryParse(value, out var parsedValue))
                         {
-                            p.SetValue(tileInstance, parsedValue);
+                            p.SetValue(instance, parsedValue);
                         }
                     }
                     // Parse double
@@ -263,12 +288,12 @@ namespace CodeDeck.PluginSystem
                     {
                         if (double.TryParse(value, out var parsedValue))
                         {
-                            p.SetValue(tileInstance, parsedValue);
+                            p.SetValue(instance, parsedValue);
                         }
                     }
                     else
                     {
-                        _logger.LogWarning($"<{nameof(Plugin)}.{nameof(MapSettingsToTile)}> Can not map setting '{p.Name}' because data type '{p.PropertyType.Name}' is not supported.");
+                        _logger.LogWarning($"<{nameof(Plugin)}.{nameof(MapSettings)}> Can not map setting '{p.Name}' because data type '{p.PropertyType.Name}' is not supported.");
                     }
                 }
             }

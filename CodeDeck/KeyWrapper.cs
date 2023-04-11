@@ -1,6 +1,5 @@
 ﻿using CodeDeck.Models.Configuration;
 using CodeDeck.PluginAbstractions;
-using CodeDeck.PluginSystem;
 using Microsoft.Extensions.Logging;
 using OpenMacroBoard.SDK;
 using SixLabors.ImageSharp;
