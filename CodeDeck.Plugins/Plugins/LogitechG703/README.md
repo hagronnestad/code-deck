@@ -14,11 +14,11 @@ Shows the battery level of a Logitech G703 Wireless mouse.
 
 ### Settings
 
-| Setting            | Default            | Description                                                   |
-| ------------------ | ------------------ | ------------------------------------------------------------- |
-| Format             | `🖱\n{0}%\n{1:N2}V` | Text format to use when headset is in normal use.             |
-| FormatDisconnected | `🖱\n❌`             | Text format to use when the headset is disconnected.          |
-| Interval           | `600 000 ms`       | Interval at which to query the headset. Default `10` minutes. |
+| Setting            | Default            | Description                                                                                                                  |
+| ------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Format             | `🖱\n{0}%\n{1:N2}V` | Text format to use when the mouse is connected. `{0}` is the battery percentage and `{1}` is the voltage as a decimal value. |
+| FormatDisconnected | `🖱\n❌`             | Text format to use when the mouse is disconnected.                                                                           |
+| Interval           | `600 000 ms`       | Interval at which to refresh the battery value. Default `10` minutes.                                                        |
 
 ### Examples
 
