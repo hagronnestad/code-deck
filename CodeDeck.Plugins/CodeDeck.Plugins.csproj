@@ -21,6 +21,7 @@
     <Compile Remove="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs" />
     <Compile Remove="Plugins\KeyboardSimulator\KeyboardSimulator.cs" />
     <Compile Remove="Plugins\Lock\Lock.cs" />
+    <Compile Remove="Plugins\LogitechG703\LogitechG703.cs" />
     <Compile Remove="Plugins\MediaKeys\MediaKeys.cs" />
     <Compile Remove="Plugins\NetworkTools\ExternalIpTile.cs" />
     <Compile Remove="Plugins\PerformanceCounters\PerformanceCounters.cs" />
@@ -45,6 +46,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\Counter\Counter.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\LogitechG703\LogitechG703.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\SteelSeriesRival3Wireless\SteelSeriesRival3Wireless.cs">
