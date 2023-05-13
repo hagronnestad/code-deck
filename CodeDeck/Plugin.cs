@@ -275,6 +275,14 @@ namespace CodeDeck
                             p.SetValue(instance, parsedValue);
                         }
                     }
+                    // Parse byte
+                    else if (p.PropertyType == typeof(byte?) || p.PropertyType == typeof(byte))
+                    {
+                        if (byte.TryParse(value, out var parsedValue))
+                        {
+                            p.SetValue(instance, parsedValue);
+                        }
+                    }
                     // Parse int
                     else if (p.PropertyType == typeof(int?) || p.PropertyType == typeof(int))
                     {
