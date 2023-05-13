@@ -420,7 +420,7 @@ namespace CodeDeck
 
             foreach (var keyWrapper in keyWrappersForCurrentPage)
             {
-                keyWrapper.CachedComposedKeyBitmapImage ??= CreateKeyBitmap(keyWrapper);
+                keyWrapper.CachedComposedKeyBitmapImage = CreateKeyBitmap(keyWrapper);
                 _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index, keyWrapper.CachedComposedKeyBitmapImage);
             }
         }
