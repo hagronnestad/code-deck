@@ -334,6 +334,7 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 | Counter                            | [CounterTile](CodeDeck.Plugins/Plugins/Counter/Counter.md)                                | 🪟🐧         |                             |
 | CounterStrikeGlobalOffensiveNetCon | [ExecuteCommand](CodeDeck.Plugins/Plugins/CounterStrikeGlobalOffensiveNetCon/README.md)   | 🪟🐧*        | *Linux support is untested. |
 | HyperXCloudFlightWireless          | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudFlightWireless/README.md)               | 🪟🐧*        | *Linux support is untested. |
+| HyperXCloudAlphaWireless           | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudAlphaWireless/README.md)                | 🪟🐧*        | *Linux support is untested. |
 | Lock                               | [LockTile](CodeDeck.Plugins/Plugins/Lock/Lock.md)                                         | 🪟          |                             |
 | LogitechG703                       | [BatteryTile](CodeDeck.Plugins/Plugins/LogitechG703/README.md)                            | 🪟🐧*        | *Linux support is untested. |
 | MediaKeys                          | MuteTile                                                                                  | 🪟          |                             |
