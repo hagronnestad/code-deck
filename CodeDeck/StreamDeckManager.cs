@@ -154,6 +154,8 @@ namespace CodeDeck
 
         private void StreamDeck_ConnectionStateChanged(object? sender, ConnectionEventArgs e)
         {
+            _logger.LogWarning($"{nameof(StreamDeck_ConnectionStateChanged)}: {nameof(e.NewConnectionState)}: {e.NewConnectionState}");
+
             if (_streamDeck is null) return;
             _streamDeck.SetBrightness((byte)_configurationProvider.LoadedConfiguration.Brightness);
             RefreshPage();
