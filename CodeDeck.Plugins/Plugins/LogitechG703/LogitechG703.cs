@@ -41,11 +41,12 @@ public class LogitechG703 : CodeDeckPlugin
 
         private static HidDevice? FindDevice()
         {
-            return DeviceList.Local
+            var devices = DeviceList.Local
                 .GetHidDevices(0x046D, 0xC539)
                 // Filter to pick the correct endpoint
-                .Where(x => x.GetMaxInputReportLength() == 20)
-                .FirstOrDefault();
+                .Where(x => x.GetMaxInputReportLength() == 20).ToList();
+
+            return devices?.FirstOrDefault();
         }
 
         private async Task ReadTask(CancellationToken cancellationToken)
@@ -58,7 +59,7 @@ public class LogitechG703 : CodeDeckPlugin
                 try
                 {
                     // Find device or wait and try again
-                    _device ??= FindDevice();
+                    _device = FindDevice();
                     if (_device == null)
                     {
                         await Task.Delay(1000, cancellationToken);
@@ -66,7 +67,7 @@ public class LogitechG703 : CodeDeckPlugin
                     }
 
                     // Open device or wait and try again
-                    hidStream ??= _device.Open();
+                    hidStream = _device.Open();
                     if (hidStream == null)
                     {
                         await Task.Delay(1000, cancellationToken);
@@ -77,6 +78,13 @@ public class LogitechG703 : CodeDeckPlugin
                     var data = buffer[0..readBytes];
                     HandleHidPpReport(data);
                 }
+                catch (TimeoutException)
+                {
+                    if ((DateTime.Now - _lastHandleHidPpReport).TotalSeconds > 30)
+                    {
+                        Text = FormatDisconnected ?? "🖱\n❌";
+                    }
+                }
                 catch (Exception e)
                 {
                     Debug.WriteLine($"{nameof(RequestBatteryInformationFeatureIndex)}: Exception: '{e.Message}'");
@@ -84,12 +92,17 @@ public class LogitechG703 : CodeDeckPlugin
             }
         }
 
+        private DateTime _lastHandleHidPpReport = DateTime.Now;
+
         private void HandleHidPpReport(byte[] data)
         {
+            _lastHandleHidPpReport = DateTime.Now;
+
             var p = HidPp.HidPpReport.FromBytes(data);
 
             if (p == null) return;
             if (p.DeviceIndex != DeviceIndex) return;
+            if (p.FeatureIndex == 0x09) return; // Mouse move?
 
             // Get feature response
             if (p.FeatureIndex == HidPp.HIDPP_PAGE_ROOT_IDX &&
@@ -115,7 +128,7 @@ public class LogitechG703 : CodeDeckPlugin
             {
                 ShowIndicator = true;
 
-                if (_device == null) _device = FindDevice();
+                _device = FindDevice();
                 if (_device == null) throw new NullReferenceException(nameof(_device));
 
                 using var s = _device.Open();
@@ -141,17 +154,14 @@ public class LogitechG703 : CodeDeckPlugin
             {
                 ShowIndicator = true;
 
-                if (_device == null) _device = FindDevice();
+                _device = FindDevice();
                 if (_device == null) throw new NullReferenceException(nameof(_device));
 
                 using var s = _device.Open();
 
-                if (_batteryFeatureIndex == null)
-                {
-                    await RequestBatteryInformationFeatureIndex(cancellationToken);
-                    await Task.Delay(250, cancellationToken);
-                    if (_batteryFeatureIndex == null) throw new Exception($"'{nameof(_batteryFeatureIndex)}' is still 'null'");
-                }
+                await RequestBatteryInformationFeatureIndex(cancellationToken);
+                await Task.Delay(250, cancellationToken);
+                if (_batteryFeatureIndex == null) throw new Exception($"'{nameof(_batteryFeatureIndex)}' is still 'null'");
 
                 byte[] report = new byte[_device.GetMaxInputReportLength()];
                 var packet = HidPp.CreateGetBatteryInformationPacket(DeviceIndex, _batteryFeatureIndex.Value);
@@ -179,7 +189,7 @@ public class LogitechG703 : CodeDeckPlugin
                     return;
                 }
 
-                GetBatteryInformation(cancellationToken).Wait(cancellationToken);
+                await GetBatteryInformation(cancellationToken);
                 await Task.Delay(Interval ?? 10 * 60 * 1000, cancellationToken);
             }
         }
@@ -285,8 +295,8 @@ public class LogitechG703 : CodeDeckPlugin
             public byte FuncIndexAndSoftwareId;
             public byte[] Params = new byte[20 - 4];
 
-            public byte FuncIndex => (byte)(FuncIndexAndSoftwareId >> 4);
-            public byte SoftwareId => (byte)(FuncIndexAndSoftwareId & 0x0F);
+            public byte FuncIndex => (byte) (FuncIndexAndSoftwareId >> 4);
+            public byte SoftwareId => (byte) (FuncIndexAndSoftwareId & 0x0F);
 
             public static HidPpReport? FromBytes(byte[] bytes)
             {
