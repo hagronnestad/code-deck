@@ -29,6 +29,7 @@ The `Code`-part of the name is a reference to how configuration and plugins work
   - [Configuration](#configuration)
     - [Configuration File Structure](#configuration-file-structure)
       - [Stream Deck](#stream-deck)
+      - [Plugin Settings](#plugin-settings)
       - [Profile](#profile-1)
       - [Page](#page-1)
       - [Key](#key-1)
@@ -122,6 +123,19 @@ Full path to configuration file:
 {
   // Stream Deck
   "Brightness": 100,
+
+  // Plugin settings
+  "Plugins": [
+    {
+      "Name": "NissanConnect",
+      "Settings": {
+        "Email": "",
+        "Password": ""
+      }
+    },
+  ],
+
+  // Profiles
   "Profiles": [
     {
       // Profile
@@ -164,6 +178,33 @@ Full path to configuration file:
 | Brightness   | `100`             | Brightness in percent.                                                                                                   |
 | FallbackFont | `Twemoji Mozilla` | Font to use if a glyph is not available in the `Key`-font. Set this to an emoji or icon font to easily use icons/emojis. |
 | Profiles     | `Profile[]`       | An array of `Profile` objects.                                                                                           |
+
+
+#### Plugin Settings
+Plugins can have settings that are specific to the plugin and accessible from all tiles in the plugin. Settings are specified in the top level `Plugins`-array. Each plugin has a `Name` and a `Settings`-object.
+
+```json
+// Plugin settings
+"Plugins": [
+  {
+    "Name": "NissanConnect",
+    "Settings": {
+      "Email": "",
+      "Password": ""
+    }
+  },
+],
+```
+
+Use the `[Setting]` attribute on properties in the plugin class to automatically bind the settings to the property.
+
+```csharp
+    public class NissanConnect : CodeDeckPlugin
+    {
+        [Setting] public static string? Email { get; set; }
+        [Setting] public static string? Password { get; set; }
+    }
+```
 
 
 #### Profile
@@ -210,6 +251,7 @@ Full path to configuration file:
   "Page": null,
   "Plugin": "Clock",
   "Tile": "DigitalClockTile",
+  "DisableTilePress": false,
   "Text": "Clock",
   "TextColor": "#ffffff",
   "TextOffsetX": 0,
@@ -235,33 +277,34 @@ Full path to configuration file:
 }
 ```
 
-| Field                  | Example Values            | Description                                                                                                                                           |
-| ---------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Index                  | `0` ... `X`               | Index of the key on the Stream Deck. `X` = number of keys - `1`.                                                                                      |
-| KeyType                | `"Normal"` \| `"Back"`    | The type of key. Default is `"Normal"`. `"Back"` is a key that navigates backwards.                                                                   |
-| Profile                | `"ProfileName"`           | The name of the `Profile` that contains the `Page` to navigate to.                                                                                    |
-| Page                   | `"PageName"`              | The name of the `Page` to navigate to.                                                                                                                |
-| Plugin                 | `"PluginName"`            | The name of the `Plugin` to associate with this key.                                                                                                  |
-| Tile                   | `"TileName"`              | The name of the `Tile` to associate with this key.                                                                                                    |
-| Text                   | `"Some Text"`             | The text to show on the key. Text is always centered. Use `\n` for multiple lines.                                                                    |
-| TextColor              | `"#ffffff"`               | Color of the `Text`.                                                                                                                                  |
-| TextOffsetX            | `0`                       | The offset to add to the X-position of the text.                                                                                                      |
-| TextOffsetY            | `-5`                      | The offset to add to the Y-position of the text.                                                                                                      |
-| LineSpacing            | `1.0`                     | Spacing between lines. Value is in percent of the line height. `1.1` means the spacing is 10% more than the line height.                              |
-| Font                   | `"Font Name"`             | Name of the font to use for the `Text`.                                                                                                               |
-| FontSize               | `10`                      | Size of the `Font`.                                                                                                                                   |
-| FontBold               | `true` \| `false`         |                                                                                                                                                       |
-| FontItalic             | `true` \| `false`         |                                                                                                                                                       |
-| BackgroundColor        | `"#000000"`               | Color of the background color of the key.                                                                                                             |
-| Image                  | `filename.png`            | Path to an image file. The image will be shown on the key.                                                                                            |
-| DisableTileImage       | `true` \| `false`         | Setting this to `true` disables any image set by a Plugin Tile.                                                                                       |
-| ImagePadding           | `5`                       | A padding to apply to the image. Very useful when trying to match all image sizes.                                                                    |
-| ImageOffsetX           | `0`                       | The offset to add to the X-position of the image.                                                                                                     |
-| ImageOffsetY           | `-5`                      | The offset to add to the Y-position of the image.                                                                                                     |
-| ShowFolderIndicator    | `true` \| `false`         | An optional indicator to show on keys with `KeyType` = `Page`. The indicator is a line at the bottom of the key.                                      |
-| FolderIndicatorColor   | `"#cccccc"`               |                                                                                                                                                       |
-| ActivityIndicatorColor | `"#ffff00"`               | Color of the activity indicator. Some plugins may show this indicator while doing some task. The indicator is a small circle in the top right corner. |
-| Settings               | `{ "Key": "Value", ... }` | A key/value dictionary containing the settings needed to configure the `Tile`. All values ***MUST*** be `string`s.                                    |
+| Field                  | Example Values            | Description                                                                                                                                                               |
+| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Index                  | `0` ... `X`               | Index of the key on the Stream Deck. `X` = number of keys - `1`.                                                                                                          |
+| KeyType                | `"Normal"` \| `"Back"`    | The type of key. Default is `"Normal"`. `"Back"` is a key that navigates backwards.                                                                                       |
+| Profile                | `"ProfileName"`           | The name of the `Profile` that contains the `Page` to navigate to.                                                                                                        |
+| Page                   | `"PageName"`              | The name of the `Page` to navigate to.                                                                                                                                    |
+| Plugin                 | `"PluginName"`            | The name of the `Plugin` to associate with this key.                                                                                                                      |
+| Tile                   | `"TileName"`              | The name of the `Tile` to associate with this key.                                                                                                                        |
+| DisableTilePress       | `true` \| `false`         | Setting this to `true` disables the tile press action, useful when using a Tile to open a page, but you don't want the Tile press action to be ran when opening the page. |
+| Text                   | `"Some Text"`             | The text to show on the key. Text is always centered. Use `\n` for multiple lines.                                                                                        |
+| TextColor              | `"#ffffff"`               | Color of the `Text`.                                                                                                                                                      |
+| TextOffsetX            | `0`                       | The offset to add to the X-position of the text.                                                                                                                          |
+| TextOffsetY            | `-5`                      | The offset to add to the Y-position of the text.                                                                                                                          |
+| LineSpacing            | `1.0`                     | Spacing between lines. Value is in percent of the line height. `1.1` means the spacing is 10% more than the line height.                                                  |
+| Font                   | `"Font Name"`             | Name of the font to use for the `Text`.                                                                                                                                   |
+| FontSize               | `10`                      | Size of the `Font`.                                                                                                                                                       |
+| FontBold               | `true` \| `false`         |                                                                                                                                                                           |
+| FontItalic             | `true` \| `false`         |                                                                                                                                                                           |
+| BackgroundColor        | `"#000000"`               | Color of the background color of the key.                                                                                                                                 |
+| Image                  | `filename.png`            | Path to an image file. The image will be shown on the key.                                                                                                                |
+| DisableTileImage       | `true` \| `false`         | Setting this to `true` disables any image set by a Plugin Tile.                                                                                                           |
+| ImagePadding           | `5`                       | A padding to apply to the image. Very useful when trying to match all image sizes.                                                                                        |
+| ImageOffsetX           | `0`                       | The offset to add to the X-position of the image.                                                                                                                         |
+| ImageOffsetY           | `-5`                      | The offset to add to the Y-position of the image.                                                                                                                         |
+| ShowFolderIndicator    | `true` \| `false`         | An optional indicator to show on keys with `KeyType` = `Page`. The indicator is a line at the bottom of the key.                                                          |
+| FolderIndicatorColor   | `"#cccccc"`               |                                                                                                                                                                           |
+| ActivityIndicatorColor | `"#ffff00"`               | Color of the activity indicator. Some plugins may show this indicator while doing some task. The indicator is a small circle in the top right corner.                     |
+| Settings               | `{ "Key": "Value", ... }` | A key/value dictionary containing the settings needed to configure the `Tile`. All values ***MUST*** be `string`s.                                                        |
 
 All fields are optional except for `Index`.
 
@@ -326,38 +369,42 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 
 ### List Of Built In Plugins & Tiles
 
-| Name                               | Tile                                                                                      | OS Support | Description                 |
-| ---------------------------------- | ----------------------------------------------------------------------------------------- | ---------- | --------------------------- |
-| AudioDeviceSwitcher                | AudioDeviceSwitcherTile                                                                   | 🪟          |                             |
-| Clock                              | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md)                               | 🪟🐧         |                             |
-|                                    | [StopWatchTile](CodeDeck.Plugins/Plugins/Clock/Clock.md#stopwatchtile)                    | 🪟🐧         |                             |
-| Counter                            | [CounterTile](CodeDeck.Plugins/Plugins/Counter/Counter.md)                                | 🪟🐧         |                             |
-| CounterStrikeGlobalOffensiveNetCon | [ExecuteCommand](CodeDeck.Plugins/Plugins/CounterStrikeGlobalOffensiveNetCon/README.md)   | 🪟🐧*        | *Linux support is untested. |
-| HyperXCloudFlightWireless          | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudFlightWireless/README.md)               | 🪟🐧*        | *Linux support is untested. |
-| HyperXCloudAlphaWireless           | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudAlphaWireless/README.md)                | 🪟🐧*        | *Linux support is untested. |
-| Lock                               | [LockTile](CodeDeck.Plugins/Plugins/Lock/Lock.md)                                         | 🪟          |                             |
-| LogitechG703                       | [BatteryTile](CodeDeck.Plugins/Plugins/LogitechG703/README.md)                            | 🪟🐧*        | *Linux support is untested. |
-| MediaKeys                          | MuteTile                                                                                  | 🪟          |                             |
-|                                    | VolumeDownTile                                                                            | 🪟          |                             |
-|                                    | VolumeUpTile                                                                              | 🪟          |                             |
-|                                    | NextTrackTile                                                                             | 🪟          |                             |
-|                                    | PreviousTrackTile                                                                         | 🪟          |                             |
-|                                    | StopTile                                                                                  | 🪟          |                             |
-|                                    | PlayPauseTile                                                                             | 🪟          |                             |
-| NetworkTools                       | [ExternalIpTile](CodeDeck.Plugins/Plugins/NetworkTools/README.md)                         | 🪟🐧         |                             |
-| PerformanceCounters                | [CpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#cpuusagetile)       | 🪟          |                             |
-|                                    | [MemoryUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#memoryusagetile) | 🪟          |                             |
-|                                    | [GpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#gpuusagetile)       | 🪟          |                             |
-| Runner                             | [RunTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#runtile)                              | 🪟🐧         |                             |
-|                                    | [OpenWebsiteTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#openwebsitetile)              | 🪟🐧         |                             |
-| SteelSeriesRival3Wireless          | [BatteryTile](CodeDeck.Plugins/Plugins/SteelSeriesRival3Wireless/README.md)               | 🪟🐧*        | *Linux support is untested. |
-| Template                           | TemplateTileOne                                                                           | 🪟🐧         |                             |
-|                                    | TemplateTileTwo                                                                           | 🪟🐧         |                             |
-| KeyboardSimulator                  | TyperTile                                                                                 | 🪟          |                             |
-|                                    | HotkeyTile                                                                                | 🪟          |                             |
-| Weather                            | [YrImageTile](CodeDeck.Plugins/Plugins/Weather/Weather.md#yrimagetile)                    | 🪟🐧         |                             |
-| WebRequest                         | [PlainTextTile](CodeDeck.Plugins/Plugins/WebRequest/WebRequest.md)                        | 🪟🐧         |                             |
-|                                    | [ImageTile](CodeDeck.Plugins/Plugins/WebRequest/WebRequest.md#imagetile)                  | 🪟🐧         |                             |
+| Name                               | Tile                                                                                                            | OS Support | Description                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------- |
+| AudioDeviceSwitcher                | AudioDeviceSwitcherTile                                                                                         | 🪟          |                             |
+| Clock                              | [DigitalClockTile](CodeDeck.Plugins/Plugins/Clock/Clock.md)                                                     | 🪟🐧         |                             |
+|                                    | [StopWatchTile](CodeDeck.Plugins/Plugins/Clock/Clock.md#stopwatchtile)                                          | 🪟🐧         |                             |
+| Counter                            | [CounterTile](CodeDeck.Plugins/Plugins/Counter/Counter.md)                                                      | 🪟🐧         |                             |
+| CounterStrikeGlobalOffensiveNetCon | [ExecuteCommand](CodeDeck.Plugins/Plugins/CounterStrikeGlobalOffensiveNetCon/README.md)                         | 🪟🐧*        | *Linux support is untested. |
+| HyperXCloudFlightWireless          | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudFlightWireless/README.md)                                     | 🪟🐧*        | *Linux support is untested. |
+| HyperXCloudAlphaWireless           | [BatteryTile](CodeDeck.Plugins/Plugins/HyperXCloudAlphaWireless/README.md)                                      | 🪟🐧*        | *Linux support is untested. |
+| Lock                               | [LockTile](CodeDeck.Plugins/Plugins/Lock/Lock.md)                                                               | 🪟          |                             |
+| LogitechG703                       | [BatteryTile](CodeDeck.Plugins/Plugins/LogitechG703/README.md)                                                  | 🪟🐧*        | *Linux support is untested. |
+| MediaKeys                          | MuteTile                                                                                                        | 🪟          |                             |
+|                                    | VolumeDownTile                                                                                                  | 🪟          |                             |
+|                                    | VolumeUpTile                                                                                                    | 🪟          |                             |
+|                                    | NextTrackTile                                                                                                   | 🪟          |                             |
+|                                    | PreviousTrackTile                                                                                               | 🪟          |                             |
+|                                    | StopTile                                                                                                        | 🪟          |                             |
+|                                    | PlayPauseTile                                                                                                   | 🪟          |                             |
+| NetworkTools                       | [ExternalIpTile](CodeDeck.Plugins/Plugins/NetworkTools/README.md)                                               | 🪟🐧         |                             |
+| NissanConnect                      | [NissanConnectBatteryLevelTile](CodeDeck.Plugins/Plugins/NissanConnect/README.md#nissanconnectbatteryleveltile) | 🪟🐧         |                             |
+|                                    | [NissanConnectRangeTile](CodeDeck.Plugins/Plugins/NissanConnect/README.md#nissanconnectrangetile)               | 🪟🐧         |                             |
+|                                    | [NissanConnectChargeStatus](CodeDeck.Plugins/Plugins/NissanConnect/README.md#nissanconnectchargestatus)         | 🪟🐧         |                             |
+|                                    | [NissanConnectBatteryStatusAge](CodeDeck.Plugins/Plugins/NissanConnect/README.md#nissanconnectbatterystatusage) | 🪟🐧         |                             |
+| PerformanceCounters                | [CpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#cpuusagetile)                             | 🪟          |                             |
+|                                    | [MemoryUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#memoryusagetile)                       | 🪟          |                             |
+|                                    | [GpuUsageTile](CodeDeck.Plugins/Plugins/PerformanceCounters/README.md#gpuusagetile)                             | 🪟          |                             |
+| Runner                             | [RunTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#runtile)                                                    | 🪟🐧         |                             |
+|                                    | [OpenWebsiteTile](CodeDeck.Plugins/Plugins/Runner/Runner.md#openwebsitetile)                                    | 🪟🐧         |                             |
+| SteelSeriesRival3Wireless          | [BatteryTile](CodeDeck.Plugins/Plugins/SteelSeriesRival3Wireless/README.md)                                     | 🪟🐧*        | *Linux support is untested. |
+| Template                           | TemplateTileOne                                                                                                 | 🪟🐧         |                             |
+|                                    | TemplateTileTwo                                                                                                 | 🪟🐧         |                             |
+| KeyboardSimulator                  | TyperTile                                                                                                       | 🪟          |                             |
+|                                    | HotkeyTile                                                                                                      | 🪟          |                             |
+| Weather                            | [YrImageTile](CodeDeck.Plugins/Plugins/Weather/Weather.md#yrimagetile)                                          | 🪟🐧         |                             |
+| WebRequest                         | [PlainTextTile](CodeDeck.Plugins/Plugins/WebRequest/WebRequest.md)                                              | 🪟🐧         |                             |
+|                                    | [ImageTile](CodeDeck.Plugins/Plugins/WebRequest/WebRequest.md#imagetile)                                        | 🪟🐧         |                             |
 
 
 ### Plugin Development

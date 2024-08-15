@@ -18,12 +18,14 @@
     <Compile Remove="Plugins\Clock\StopWatch.cs" />
     <Compile Remove="Plugins\CounterStrikeGlobalOffensiveNetCon\CounterStrikeGlobalOffensiveNetCon.cs" />
     <Compile Remove="Plugins\Counter\Counter.cs" />
+    <Compile Remove="Plugins\HyperXCloudAlphaWireless\HyperXCloudAlphaWireless.cs" />
     <Compile Remove="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs" />
     <Compile Remove="Plugins\KeyboardSimulator\KeyboardSimulator.cs" />
     <Compile Remove="Plugins\Lock\Lock.cs" />
     <Compile Remove="Plugins\LogitechG703\LogitechG703.cs" />
     <Compile Remove="Plugins\MediaKeys\MediaKeys.cs" />
     <Compile Remove="Plugins\NetworkTools\ExternalIpTile.cs" />
+    <Compile Remove="Plugins\NissanConnect\NissanConnect.cs" />
     <Compile Remove="Plugins\PerformanceCounters\PerformanceCounters.cs" />
     <Compile Remove="Plugins\Runner\Runner.cs" />
     <Compile Remove="Plugins\SteelSeriesRival3Wireless\SteelSeriesRival3Wireless.cs" />
@@ -48,7 +50,16 @@
     <Content Include="Plugins\Counter\Counter.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Plugins\HyperXCloudAlphaWireless\HyperXCloudAlphaWireless.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Plugins\LogitechG703\LogitechG703.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\NissanConnect\lib\NissanConnectLib.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\NissanConnect\NissanConnect.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\SteelSeriesRival3Wireless\SteelSeriesRival3Wireless.cs">
@@ -84,6 +95,10 @@
     <Content Include="Plugins\WebRequest\WebRequest.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
