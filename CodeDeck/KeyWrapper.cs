@@ -72,6 +72,7 @@ namespace CodeDeck
         public async void HandleKeyPressDown()
         {
             if (Tile == null) return;
+            if (Key.DisableTilePress is not null && Key.DisableTilePress.Value) return;
 
             try
             {
@@ -86,6 +87,7 @@ namespace CodeDeck
         public async void HandleKeyPressUp()
         {
             if (Tile == null) return;
+            if (Key.DisableTilePress is not null && Key.DisableTilePress.Value) return;
 
             try
             {
