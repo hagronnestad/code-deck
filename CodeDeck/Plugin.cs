@@ -94,6 +94,9 @@ namespace CodeDeck
             {
                 MapSettings(_configuration.Settings, PluginType);
             }
+
+            PluginType.BaseType?.GetProperty(nameof(CodeDeckPlugin.PluginPath))?.SetValue(null, PluginPath);
+            PluginType.GetMethod("Loaded")?.Invoke(null, null);
         }
 
         public void LoadAllLibraries()
@@ -254,8 +257,7 @@ namespace CodeDeck
 
             // Get all properties with the SettingAttribute
             var settingProperties = type.GetProperties()
-                .Where(x => x.CustomAttributes.Any(ca => ca.AttributeType.Name == nameof(SettingAttribute)))
-                .ToList();
+                .Where(x => x.CustomAttributes.Any(ca => ca.AttributeType.Name == nameof(SettingAttribute)));
 
             // Try to parse the setting into the correct type and assign the value to the property
             foreach (var p in settingProperties)
