@@ -91,6 +91,63 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="ApiLibs">
+      <HintPath>Plugins\IkeaTradfri\lib\ApiLibs.dll</HintPath>
+    </Reference>
+    <Reference Include="BouncyCastle.Crypto">
+      <HintPath>Plugins\IkeaTradfri\lib\BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
+    <Reference Include="CBOR">
+      <HintPath>Plugins\IkeaTradfri\lib\CBOR.dll</HintPath>
+    </Reference>
+    <Reference Include="CoAP">
+      <HintPath>Plugins\IkeaTradfri\lib\CoAP.dll</HintPath>
+    </Reference>
+    <Reference Include="COSE">
+      <HintPath>Plugins\IkeaTradfri\lib\COSE.dll</HintPath>
+    </Reference>
+    <Reference Include="HidSharp">
+      <HintPath>..\CodeDeck.Windows\bin\Release\net7.0-windows\publish\HidSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces">
+      <HintPath>Plugins\IkeaTradfri\lib\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Plugins\IkeaTradfri\lib\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Numbers">
+      <HintPath>Plugins\IkeaTradfri\lib\Numbers.dll</HintPath>
+    </Reference>
+    <Reference Include="RestSharp">
+      <HintPath>Plugins\IkeaTradfri\lib\RestSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive">
+      <HintPath>Plugins\IkeaTradfri\lib\System.Reactive.dll</HintPath>
+    </Reference>
+    <Reference Include="Tomidix.NetStandard.Tradfri">
+      <HintPath>Plugins\IkeaTradfri\lib\Tomidix.NetStandard.Tradfri.dll</HintPath>
+    </Reference>
+    <Reference Include="Zeroconf">
+      <HintPath>Plugins\IkeaTradfri\lib\Zeroconf.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Plugins\IkeaTradfri\IkeaTradfri.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\IkeaTradfri\TradfriBlindTile.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\IkeaTradfri\TradfriLightTile.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+    <Compile Update="Plugins\IkeaTradfri\TradfriOutletTile.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Plugins\AudioDeviceSwitcher\lib\AudioSwitcher.AudioApi.CoreAudio.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -101,6 +158,96 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Plugins\AudioDeviceSwitcher\lib\System.Windows.Extensions.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\blind01.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\blind02.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\blind03.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\blind04.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\blind05.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\bulb.pdn">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\bulb01.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\bulb02.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\bulb03.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\remote.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\Images\tradfri.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\ApiLibs.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\BouncyCastle.Crypto.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\CBOR.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\CoAP.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\COSE.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\Microsoft.Bcl.AsyncInterfaces.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\Newtonsoft.Json.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\Numbers.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\RestSharp.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Collections.Specialized.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Net.NameResolution.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Net.Sockets.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Reactive.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Runtime.CompilerServices.Unsafe.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Threading.Tasks.Extensions.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Threading.Thread.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\System.Threading.ThreadPool.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\Tomidix.NetStandard.Tradfri.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Plugins\IkeaTradfri\lib\Zeroconf.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Plugins\KeyboardSimulator\lib\AssemblyAttribute.dll">
