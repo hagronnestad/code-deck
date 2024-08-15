@@ -42,6 +42,7 @@ namespace CodeDeck.Models.Configuration
 
         public bool? ShowFolderIndicator { get; set; }
         public string? FolderIndicatorColor { get; set; }
+        public bool? DisableTilePress { get; set; }
 
         /// <summary>
         /// Plugin reference
