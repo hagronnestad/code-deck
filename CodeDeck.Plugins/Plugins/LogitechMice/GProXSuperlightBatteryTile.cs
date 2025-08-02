@@ -84,7 +84,7 @@ public partial class LogitechMice : CodeDeckPlugin
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine($"{nameof(RequestBatteryInformationFeatureIndex)}: Exception: '{e.Message}'");
+                    Debug.WriteLine($"{nameof(ReadTask)}: Exception: '{e.Message}'");
                 }
             }
         }

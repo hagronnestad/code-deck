@@ -34,7 +34,7 @@ Shows the battery level of a Logitech G703 Wireless mouse.
 ```json
 {
     "Plugin": "LogitechMice",
-    "Tile": "BatteryTile",
+    "Tile": "G703BatteryTile",
     "Settings": {
         "Format": "🖱️\n{0}%\n{1:N2}V",
         "FormatDisconnected": "🖱️\n💤",
@@ -58,8 +58,8 @@ Shows the battery level of a Logitech G Pro X Superlight Wireless mouse.
 
 ```json
 {
-    "Plugin": "LogitechGProXSuperlight",
-    "Tile": "BatteryTile",
+    "Plugin": "LogitechMice",
+    "Tile": "GProXSuperlightBatteryTile",
     "Settings": {
         "Format": "🖱️\n{0}%",
         "FormatDisconnected": "🖱️\n💤",
