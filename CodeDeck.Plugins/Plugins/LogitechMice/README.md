@@ -33,7 +33,7 @@ Shows the battery level of a Logitech G703 Wireless mouse.
 
 ```json
 {
-    "Plugin": "LogitechG703",
+    "Plugin": "LogitechMice",
     "Tile": "BatteryTile",
     "Settings": {
         "Format": "🖱️\n{0}%\n{1:N2}V",
