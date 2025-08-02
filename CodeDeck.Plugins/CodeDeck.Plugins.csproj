@@ -22,7 +22,11 @@
     <Compile Remove="Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.cs" />
     <Compile Remove="Plugins\KeyboardSimulator\KeyboardSimulator.cs" />
     <Compile Remove="Plugins\Lock\Lock.cs" />
-    <Compile Remove="Plugins\LogitechG703\LogitechG703.cs" />
+    <Compile Remove="Plugins\LogitechMice\G703BatteryTile.cs" />
+    <Compile Remove="Plugins\LogitechMice\GProXSuperlightBatteryTile.cs" />
+    <Compile Remove="Plugins\LogitechMice\Hid\HidPp.cs" />
+    <Compile Remove="Plugins\LogitechMice\Hid\HidPpReport.cs" />
+    <Compile Remove="Plugins\LogitechMice\LogitechMice.cs" />
     <Compile Remove="Plugins\MediaKeys\MediaKeys.cs" />
     <Compile Remove="Plugins\NetworkTools\ExternalIpTile.cs" />
     <Compile Remove="Plugins\NissanConnect\NissanConnect.cs" />
@@ -53,7 +57,19 @@
     <Content Include="Plugins\HyperXCloudAlphaWireless\HyperXCloudAlphaWireless.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Plugins\LogitechG703\LogitechG703.cs">
+    <Content Include="Plugins\LogitechMice\G703BatteryTile.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\LogitechMice\GProXSuperlightBatteryTile.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\LogitechMice\Hid\HidPp.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\LogitechMice\Hid\HidPpReport.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Plugins\LogitechMice\LogitechMice.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Plugins\NissanConnect\lib\NissanConnectLib.dll">
