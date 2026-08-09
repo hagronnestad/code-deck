@@ -103,9 +103,12 @@ namespace CodeDeck
         {
             if (!Directory.Exists(LibrariesPath)) return;
 
+            var trustedPlatformAssemblyFileNames = GetTrustedPlatformAssemblyFileNames();
             var assemblies = Directory.GetFiles(LibrariesPath, "*.dll", SearchOption.AllDirectories);
             foreach (var assembly in assemblies)
             {
+                if (trustedPlatformAssemblyFileNames.Contains(Path.GetFileName(assembly))) continue;
+
                 try
                 {
                     LoadFromAssemblyPath(Path.GetFullPath(assembly));
@@ -123,6 +126,22 @@ namespace CodeDeck
             var sourceFilesInfo = sourceFiles.Select(x => new FileInfo(x));
 
             return sourceFilesInfo.ToList();
+        }
+
+        private static List<string> GetTrustedPlatformAssemblyPaths()
+        {
+            return ((string)(AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""))
+                .Split(Path.PathSeparator)
+                .ToList();
+        }
+
+        private static HashSet<string> GetTrustedPlatformAssemblyFileNames()
+        {
+            return GetTrustedPlatformAssemblyPaths()
+                .Select(Path.GetFileName)
+                .Where(fileName => fileName is not null)
+                .Select(fileName => fileName!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
         public bool IsAssemblyUpToDate()
@@ -153,13 +172,15 @@ namespace CodeDeck
             }
 
             // Get trusted assemblies
-            var trustedAssembliesPaths = ((string)(AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""))
-                .Split(Path.PathSeparator).ToList();
+            var trustedAssembliesPaths = GetTrustedPlatformAssemblyPaths();
+            var trustedPlatformAssemblyFileNames = GetTrustedPlatformAssemblyFileNames();
 
             // Get assemblies in the libraries directory
             if (Directory.Exists(LibrariesPath))
             {
-                trustedAssembliesPaths.AddRange(Directory.GetFiles(LibrariesPath, "*.dll", SearchOption.AllDirectories));
+                trustedAssembliesPaths.AddRange(Directory
+                    .GetFiles(LibrariesPath, "*.dll", SearchOption.AllDirectories)
+                    .Where(path => !trustedPlatformAssemblyFileNames.Contains(Path.GetFileName(path))));
             }
 
             // Convert all assembly paths into references
@@ -172,7 +193,10 @@ namespace CodeDeck
                 Name,
                 syntaxTrees,
                 references,
-                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, platform: Platform.AnyCpu));
+                new CSharpCompilationOptions(
+                    OutputKind.DynamicallyLinkedLibrary,
+                    platform: Platform.AnyCpu,
+                    nullableContextOptions: NullableContextOptions.Enable));
 
             // Try to compile and emit assembly and PDB 
             using var assemblyStream = File.Create(AssemblyFileName);
