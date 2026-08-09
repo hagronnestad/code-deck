@@ -1,0 +1,12 @@
+<Project>
+  <Target Name="CopyBuiltInPlugins" AfterTargets="Build">
+    <ItemGroup>
+      <BuiltInPluginArtifact Include="$(MSBuildThisFileDirectory)..\CodeDeck\bin\$(Configuration)\net10.0\Plugins\**\*" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(BuiltInPluginArtifact)"
+      DestinationFiles="$(TargetDir)Plugins\%(BuiltInPluginArtifact.RecursiveDir)%(BuiltInPluginArtifact.Filename)%(BuiltInPluginArtifact.Extension)"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>

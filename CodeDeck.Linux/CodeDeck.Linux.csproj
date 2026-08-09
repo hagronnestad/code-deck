@@ -11,4 +11,6 @@
     <ProjectReference Include="..\CodeDeck\CodeDeck.csproj" />
   </ItemGroup>
 
+  <Import Project="..\CodeDeck.Plugins\HostPluginArtifacts.targets" />
+
 </Project>

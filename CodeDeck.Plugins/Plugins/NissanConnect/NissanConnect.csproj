@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="NissanConnectLib" Version="1.0.11" />
+  </ItemGroup>
+</Project>

@@ -38,4 +38,6 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <Import Project="..\CodeDeck.Plugins\HostPluginArtifacts.targets" />
+
 </Project>
