@@ -517,7 +517,7 @@ namespace CodeDeck
                     var f = fontFamily.CreateFont(fontSize, fontStyle);
 
                     var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
-                    var textOptions = new TextOptions(f)
+                    var textOptions = new RichTextOptions(f)
                     {
                         Origin = new PointF(center.X + textOffsetX, center.Y + textOffsetY),
                         HorizontalAlignment = HorizontalAlignment.Center,

@@ -142,7 +142,7 @@ Plugins
 ### Nuget
 Automatic Nuget support through `packages.json` or similar is planned, but not implemented. It's possible to download Nuget-packages and add them to the `lib` directory manually.
 
-***⚠️ Make sure to add the correct (runtime/framework version) assembly from the Nuget and only one assembly with the same name. Code Deck currently uses `net7.0`.***
+***⚠️ Make sure to add the correct (runtime/framework version) assembly from the Nuget and only one assembly with the same name. Code Deck currently uses `net10.0`.***
 
 #### Example From The `PerformanceCounters` Plugin
 
@@ -206,7 +206,7 @@ Now lets have a look inside the Nuget and figure out which assembly to use.
 
 
 ```
-If `lib` contains an assembly for `net7.0` (or `net6.0`), this is usually the assembly you want.
+If `lib` contains an assembly for `net10.0`, this is usually the assembly you want. If that is unavailable, use the closest supported target framework compatible with the package and runtime.
 
 However, for `System.Diagnostics.PerformanceCounter.dll`, the assembly in `lib` will give you an error similar to: "Performance Counters are not supported on this platform." at runtime and that's because `System.Diagnostics.PerformanceCounter.dll` is platform specific.
 
