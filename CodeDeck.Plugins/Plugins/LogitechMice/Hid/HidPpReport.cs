@@ -1,5 +1,3 @@
-﻿using System.IO;
-
 namespace CodeDeck.Plugins.Plugins.LogitechMice.Hid;
 
 public class HidPpReport

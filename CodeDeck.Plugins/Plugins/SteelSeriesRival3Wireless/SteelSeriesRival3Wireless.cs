@@ -1,10 +1,5 @@
-﻿using CodeDeck.PluginAbstractions;
-using HidSharp;
-using System;
+﻿using HidSharp;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Based on rivalcfg: https://github.com/flozz/rivalcfg/blob/master/rivalcfg/devices/rival3_wireless.py

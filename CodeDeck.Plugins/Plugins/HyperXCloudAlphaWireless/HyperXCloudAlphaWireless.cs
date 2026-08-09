@@ -1,10 +1,5 @@
-﻿using CodeDeck.PluginAbstractions;
-using HidSharp;
-using System;
+﻿using HidSharp;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
 /// HID report bytes found here:

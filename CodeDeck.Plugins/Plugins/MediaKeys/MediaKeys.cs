@@ -1,9 +1,4 @@
-﻿using CodeDeck.PluginAbstractions;
-using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.Runner
 {

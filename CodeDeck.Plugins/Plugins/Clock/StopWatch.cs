@@ -1,9 +1,5 @@
-﻿using CodeDeck.PluginAbstractions;
 using SixLabors.ImageSharp;
-using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.Clock;
 

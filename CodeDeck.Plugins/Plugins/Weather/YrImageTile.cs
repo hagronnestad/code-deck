@@ -1,14 +1,7 @@
-﻿using CodeDeck.PluginAbstractions;
-using SixLabors.ImageSharp;
-using System;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Net.Http.Json;
 using CodeDeck.Plugins.Plugins.Weather.Models.Yr;
-using System.IO;
+using SixLabors.ImageSharp;
 using System.Globalization;
-using System.Linq;
+using System.Net.Http.Json;
 
 namespace CodeDeck.Plugins.Plugins.Weather
 {

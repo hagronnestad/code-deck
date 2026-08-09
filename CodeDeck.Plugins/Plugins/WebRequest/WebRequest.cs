@@ -1,12 +1,6 @@
-﻿using CodeDeck.PluginAbstractions;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using System;
-using System.Diagnostics;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+using SixLabors.ImageSharp;
 
 namespace CodeDeck.Plugins.Plugins.WebRequest
 {

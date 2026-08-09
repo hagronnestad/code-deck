@@ -1,15 +1,7 @@
-﻿using CodeDeck.PluginAbstractions;
 using SixLabors.ImageSharp;
-using System;
 using System.Diagnostics;
 using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Runtime.Versioning;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Reflection.Metadata;
 
 namespace CodeDeck.Plugins.Plugins.Runner
 {

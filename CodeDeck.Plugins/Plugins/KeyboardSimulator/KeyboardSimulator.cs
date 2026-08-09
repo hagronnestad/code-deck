@@ -1,12 +1,6 @@
-﻿using CodeDeck.PluginAbstractions;
-using InputSimulatorEx;
 using InputSimulatorEx.Native;
-using System;
-using System.Collections.Generic;
+using InputSimulatorEx;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.Counter;
 
@@ -22,7 +16,7 @@ public class KeyboardSimulator : CodeDeckPlugin
         {
             return base.Init(cancellationToken);
         }
-        
+
         public override async Task OnTilePressDown(CancellationToken cancellationToken)
         {
             _inputSimulator.Keyboard.TextEntry(Text ?? "No text specified!");
@@ -72,7 +66,7 @@ public class KeyboardSimulator : CodeDeckPlugin
             {
                 _inputSimulator.Keyboard.KeyPress(_keys.First());
             }
-            
+
             return base.OnTilePressDown(cancellationToken);
         }
     }

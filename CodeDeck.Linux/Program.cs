@@ -1,5 +1,3 @@
-﻿using System.Threading.Tasks;
-
 namespace CodeDeck.Linux
 {
     internal class Program

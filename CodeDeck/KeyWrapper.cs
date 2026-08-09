@@ -1,11 +1,7 @@
-﻿using CodeDeck.Models.Configuration;
 using CodeDeck.PluginAbstractions;
 using Microsoft.Extensions.Logging;
 using OpenMacroBoard.SDK;
 using SixLabors.ImageSharp;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck
 {

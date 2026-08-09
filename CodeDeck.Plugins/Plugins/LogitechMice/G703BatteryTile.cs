@@ -1,11 +1,6 @@
-﻿using CodeDeck.PluginAbstractions;
 using CodeDeck.Plugins.Plugins.LogitechMice.Hid;
 using HidSharp;
-using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.LogitechMice;
 
