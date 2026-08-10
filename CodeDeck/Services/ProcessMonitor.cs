@@ -8,8 +8,8 @@ namespace CodeDeck.Services
         public event EventHandler<string>? ProcessStarted;
         public event EventHandler<string>? ProcessExited;
 
-        private readonly Dictionary<string, bool> _monitoredProcesses = new();
-        private readonly Timer _timer = new();
+        private readonly Dictionary<string, bool> _monitoredProcesses = new(StringComparer.OrdinalIgnoreCase);
+        private readonly System.Timers.Timer _timer = new();
 
         public ProcessMonitor()
         {
@@ -30,14 +30,12 @@ namespace CodeDeck.Services
 
         public void Add(string name)
         {
-            if (_monitoredProcesses.ContainsKey(name)) return;
-            _monitoredProcesses.Add(name.ToLower(), false);
+            _monitoredProcesses.TryAdd(name, false);
         }
 
         public void Remove(string name)
         {
-            if (!_monitoredProcesses.ContainsKey(name)) return;
-            _monitoredProcesses.Remove(name.ToLower());
+            _monitoredProcesses.Remove(name);
         }
 
         public void Clear()
@@ -54,34 +52,29 @@ namespace CodeDeck.Services
         {
             if (_monitoredProcesses.Count == 0) return;
 
-            var runningProcesses = Process.GetProcesses()
-                .Select(x => x.ProcessName.ToLower())
-                .Distinct()
-                .ToList();
-
-            foreach (var monitoredProcess in _monitoredProcesses.Keys)
+            // Process instances own an OS handle each, so they must be disposed.
+            // A case-insensitive set also avoids allocating a lowercased string per
+            // running process on every tick.
+            var runningProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var processes = Process.GetProcesses();
+            try
             {
-                if (runningProcesses.Contains(monitoredProcess))
-                // The monitored process is running
-                {
-                    if (!_monitoredProcesses[monitoredProcess])
-                    // Monitored process is not marked as running
-                    {
-                        // Mark process as running and invoke event
-                        _monitoredProcesses[monitoredProcess] = true;
-                        ProcessStarted?.Invoke(this, monitoredProcess);
-                    }
-                }
-                else
-                // The monitored process is NOT running
-                {
-                    // Continue if the monitored process is already marked as not running
-                    if (!_monitoredProcesses[monitoredProcess]) continue;
+                foreach (var process in processes) runningProcesses.Add(process.ProcessName);
+            }
+            finally
+            {
+                foreach (var process in processes) process.Dispose();
+            }
 
-                    // Monitored process is marked as running, mark as NOT running and invoke event
-                    _monitoredProcesses[monitoredProcess] = false;
-                    ProcessExited?.Invoke(this, monitoredProcess);
-                }
+            foreach (var monitoredProcess in _monitoredProcesses.Keys.ToList())
+            {
+                var isRunning = runningProcesses.Contains(monitoredProcess);
+                if (isRunning == _monitoredProcesses[monitoredProcess]) continue;
+
+                _monitoredProcesses[monitoredProcess] = isRunning;
+
+                if (isRunning) ProcessStarted?.Invoke(this, monitoredProcess);
+                else ProcessExited?.Invoke(this, monitoredProcess);
             }
         }
     }
