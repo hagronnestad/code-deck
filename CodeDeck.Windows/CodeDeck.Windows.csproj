@@ -9,6 +9,11 @@
     <UseWindowsForms>True</UseWindowsForms>
     <StartupObject>CodeDeck.Windows.Program</StartupObject>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+
+    <!-- This app idles in the tray with a small heap, so background GC mostly buys
+         a dedicated thread and extra retained memory for gen2 pauses that are
+         negligible at this heap size. Everything else is already the default. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
