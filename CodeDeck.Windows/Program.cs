@@ -1,5 +1,6 @@
-﻿using CodeDeck.Windows.Properties;
+using CodeDeck.Windows.Properties;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace CodeDeck.Windows
 {
@@ -7,18 +8,21 @@ namespace CodeDeck.Windows
     {
         private static NotifyIcon _ni = new();
         private static ContextMenuStrip _cms = new();
+        private static PluginTaskWindow? _pluginTaskWindow;
 
         public static void Main(string[] args)
         {
-            _ = CodeDeck.Program.Main(args);
+            var debugConsoleRequested = Debugger.IsAttached
+                || args.Contains("--debug", StringComparer.OrdinalIgnoreCase);
 
-            var f = new Form()
+            if (debugConsoleRequested && AllocConsole())
             {
-                Visible = false,
-                ShowInTaskbar = false,
-                WindowState = FormWindowState.Minimized
-            };
-            f.Resize += (s, e) => { if (f.WindowState == FormWindowState.Minimized) f.Hide(); };
+                Console.Title = "CodeDeck Debug Log";
+            }
+
+            var hostTask = CodeDeck.Program.Main(args);
+
+            using var applicationContext = new ApplicationContext();
 
             _ni.Visible = true;
             _ni.ContextMenuStrip = _cms;
@@ -43,16 +47,32 @@ namespace CodeDeck.Windows
                 }
             };
 
+            var mnuItemPluginTasks = _cms.Items.Add("Plugin Tasks...");
+            mnuItemPluginTasks.Click += (_, _) => ShowPluginTasks();
+
             var mnuItemExit = _cms.Items.Add("Exit");
             mnuItemExit.Click += (s, e) =>
             {
+                _pluginTaskWindow?.Close();
                 _ni.Visible = false;
                 CodeDeck.Program.StopHost();
-                f.Close();
-                Application.Exit();
+
+                // Give the host a chance to run its ordered shutdown (tile DeInit,
+                // plugin task cancellation and assembly load context unloading)
+                // before the process goes away.
+                try
+                {
+                    hostTask.Wait(TimeSpan.FromSeconds(15));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Host shutdown failed: {ex.Message}");
+                }
+
+                applicationContext.ExitThread();
             };
 
-            Application.Run(f);
+            Application.Run(applicationContext);
         }
 
         private static void _ni_MouseClick(object? sender, MouseEventArgs e)
@@ -62,5 +82,25 @@ namespace CodeDeck.Windows
                 _cms.Show();
             }
         }
+
+        private static void ShowPluginTasks()
+        {
+            if (_pluginTaskWindow is null || _pluginTaskWindow.IsDisposed)
+            {
+                _pluginTaskWindow = new PluginTaskWindow(() => _pluginTaskWindow = null);
+                _pluginTaskWindow.Show();
+                return;
+            }
+
+            if (_pluginTaskWindow.WindowState == FormWindowState.Minimized)
+            {
+                _pluginTaskWindow.WindowState = FormWindowState.Normal;
+            }
+
+            _pluginTaskWindow.Activate();
+        }
+
+        [DllImport("kernel32.dll")]
+        private static extern bool AllocConsole();
     }
 }
