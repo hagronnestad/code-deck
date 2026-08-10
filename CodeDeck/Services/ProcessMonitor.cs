@@ -52,18 +52,10 @@ namespace CodeDeck.Services
         {
             if (_monitoredProcesses.Count == 0) return;
 
-            // Process instances own an OS handle each, so they must be disposed.
-            // A case-insensitive set also avoids allocating a lowercased string per
-            // running process on every tick.
             var runningProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var processes = Process.GetProcesses();
-            try
+            foreach (var process in Process.GetProcesses())
             {
-                foreach (var process in processes) runningProcesses.Add(process.ProcessName);
-            }
-            finally
-            {
-                foreach (var process in processes) process.Dispose();
+                runningProcesses.Add(process.ProcessName);
             }
 
             foreach (var monitoredProcess in _monitoredProcesses.Keys.ToList())
