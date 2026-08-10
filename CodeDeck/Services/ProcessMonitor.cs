@@ -18,7 +18,7 @@ namespace CodeDeck.Services
 
         public void Start()
         {
-            _timer.Interval = 500;
+            _timer.Interval = 2000;
             _timer.AutoReset = true;
             _timer.Enabled = true;
         }
