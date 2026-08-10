@@ -8,7 +8,7 @@ public class KeyboardSimulator : CodeDeckPlugin
 {
     public class TyperTile : Tile
     {
-        [Setting] public string? Text { get; set; }
+        [Setting] public new string? Text { get; set; }
 
         private InputSimulator _inputSimulator = new();
 
