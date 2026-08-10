@@ -217,7 +217,10 @@ namespace CodeDeck
 
             var tileType = PluginType
                 .GetNestedTypes()
-                .FirstOrDefault(type => type.BaseType == typeof(Tile) && type.Name == tileTypeName);
+                .FirstOrDefault(type =>
+                    type.Name == tileTypeName
+                    && !type.IsAbstract
+                    && typeof(Tile).IsAssignableFrom(type));
 
             if (tileType is null || Activator.CreateInstance(tileType) is not Tile tileInstance)
             {
