@@ -31,7 +31,7 @@ namespace CodeDeck.Plugins.Plugins.Weather
 
                 _apiUrl = $"{API_BASE_URL}compact?lat={Lat.ToString(nfi)}&lon={Lon.ToString(nfi)}";
 
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+                RunEvery("Weather update", TimeSpan.FromMilliseconds(Interval), GetAsync);
 
                 await Task.CompletedTask;
             }
@@ -93,19 +93,6 @@ namespace CodeDeck.Plugins.Plugins.Weather
                 return null;
             }
 
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    GetAsync(cancellationToken).Wait(cancellationToken);
-                    await Task.Delay(Interval, cancellationToken);
-                }
-            }
         }
     }
 }

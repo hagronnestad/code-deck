@@ -15,7 +15,7 @@ public partial class NetworkTools : CodeDeckPlugin
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunEvery("External IP update", TimeSpan.FromMilliseconds(Interval), GetAsync);
 
             await Task.CompletedTask;
 
@@ -39,20 +39,6 @@ public partial class NetworkTools : CodeDeckPlugin
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                GetAsync(cancellationToken).Wait(cancellationToken);
-                await Task.Delay(Interval, cancellationToken);
             }
         }
 

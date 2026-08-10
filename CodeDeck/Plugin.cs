@@ -9,245 +9,222 @@ namespace CodeDeck
     public class Plugin : AssemblyLoadContext
     {
         private readonly ILogger _logger;
+        private readonly IPluginTaskManager _taskManager;
         private readonly PluginConfiguration? _configuration;
+        private AssemblyDependencyResolver? _assemblyDependencyResolver;
+        private string? _loadAssemblyFileName;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private static readonly HashSet<string> SharedAssemblyNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            typeof(CodeDeckPlugin).Assembly.GetName().Name!,
+            typeof(Image).Assembly.GetName().Name!,
+            "HidSharp"
+        };
+
+        public string PluginPath { get; }
+        new public string Name { get; }
+        public string AssemblyFileName => Path.Combine(PluginPath, $"{Name}.dll");
 
         /// <summary>
-        /// The location of the plugin directory on disk.
+        /// Root for shadow copies of plugin artifacts. Deliberately a sibling of
+        /// "Plugins" rather than a subdirectory of it: the plugin file system watcher
+        /// monitors "Plugins" recursively, so copying into it would make every load
+        /// trigger another reload.
         /// </summary>
-        public string PluginPath { get; set; }
+        public static string CacheRootDirectory { get; } = Path.GetFullPath("PluginCache");
 
         /// <summary>
-        /// The name of the plugin. The plugin name is the same as the plugin directory name.
+        /// The shadow copy this plugin was loaded from. Removed when the plugin is unloaded.
         /// </summary>
-        new public string Name { get; set; }
+        public string CacheDirectory { get; }
+        public Assembly? Assembly { get; private set; }
+        public Type? PluginType { get; private set; }
+        public CodeDeckPlugin? PluginInstance { get; private set; }
+        public PluginContext Context { get; }
+        public bool IsLoaded => PluginType is not null;
 
-        public string BuildPath => Path.Combine(PluginPath, "bin");
-        public string LibrariesPath => Path.Combine(PluginPath, "lib");
-        //public string NugetPath => Path.Combine(PluginPath, "nuget");
-        public string AssemblyFileName => Path.Combine(BuildPath, $"{Name}.dll");
-        public string PdbFileName => Path.Combine(BuildPath, $"{Name}.pdb");
-
-        public List<FileInfo>? SourceFiles { get; set; }
-
-        public FileInfo? AssemblyFileInfo => File.Exists(AssemblyFileName) ? new FileInfo(AssemblyFileName) : null;
-
-        public Assembly? Assembly { get; set; }
-
-        public Type? PluginType { get; set; }
-
-
-        public Plugin(ILogger logger, string pluginDirectory, PluginConfiguration? configuration)
+        private Plugin(
+            ILogger logger,
+            IPluginTaskManager taskManager,
+            string pluginDirectory,
+            PluginConfiguration? configuration,
+            CancellationToken hostCancellationToken)
+            : base(Path.GetFileName(pluginDirectory), isCollectible: true)
         {
             _logger = logger;
+            _taskManager = taskManager;
             _configuration = configuration;
+            _cancellationTokenSource =
+                CancellationTokenSource.CreateLinkedTokenSource(hostCancellationToken);
 
             PluginPath = pluginDirectory;
             Name = Path.GetFileName(pluginDirectory);
-
-            Init();
+            CacheDirectory = Path.Combine(CacheRootDirectory, Name, Guid.NewGuid().ToString("N"));
+            Context = new PluginContext(
+                pluginDirectory,
+                configuration?.Settings,
+                _cancellationTokenSource.Token,
+                Guid.NewGuid().ToString("N"),
+                taskManager);
         }
 
-        public void Init()
+        public static Task<Plugin> LoadAsync(
+            ILogger logger,
+            IPluginTaskManager taskManager,
+            string pluginDirectory,
+            PluginConfiguration? configuration,
+            CancellationToken hostCancellationToken)
         {
-            // Create default directories
-            Directory.CreateDirectory(BuildPath);
-
-            SourceFiles = GetAllSourceFiles();
-
-            // Recompile plugin if a compiled assembly doesn't exist or
-            // if a source files has been changed since last compilation
-            if (AssemblyFileInfo == null || !IsAssemblyUpToDate())
+            return Task.Run(async () =>
             {
-                _logger.LogInformation($"<{nameof(Plugin)}.{nameof(Init)}> Compiling plugin: '{Name}'");
-                if (!CompilePlugin())
-                {
-                    _logger.LogError($"<{nameof(Plugin)}.{nameof(Init)}> Encountered errors while compiling plugin: '{Name}'");
-                    return;
-                }
-            }
+                var plugin = new Plugin(
+                    logger,
+                    taskManager,
+                    pluginDirectory,
+                    configuration,
+                    hostCancellationToken);
+                await plugin.LoadPluginAsync();
+                return plugin;
+            });
+        }
 
-            _logger.LogInformation($"<{nameof(Plugin)}.{nameof(Init)}> Loading plugin: '{AssemblyFileName}'");
-
-            // Load the plugin and libraries used by the plugin into the AssemblyLoadContext
-            LoadAllLibraries();
-            Assembly = LoadFromAssemblyPath(AssemblyFileName);
-
-            // Get the plugin type inside the loaded assembly
-            PluginType = GetPluginType();
-            if (PluginType == null)
+        private async Task LoadPluginAsync()
+        {
+            if (!File.Exists(AssemblyFileName))
             {
-                _logger.LogWarning($"<{nameof(Plugin)}.{nameof(Init)}> Assembly; '{Name}' does not contain a valid plugin!");
+                _logger.LogError($"<{nameof(Plugin)}.{nameof(LoadPluginAsync)}> Plugin assembly does not exist: '{AssemblyFileName}'");
                 return;
             }
 
-            // Map Plugin settings if available in the configuration
-            if (_configuration?.Settings != null)
+            try
             {
-                MapSettings(_configuration.Settings, PluginType);
-            }
+                _logger.LogInformation($"<{nameof(Plugin)}.{nameof(LoadPluginAsync)}> Loading plugin: '{AssemblyFileName}'");
+                _loadAssemblyFileName = CreateLoadAssemblyFileName();
+                _assemblyDependencyResolver = new AssemblyDependencyResolver(_loadAssemblyFileName);
+                Assembly = LoadFromAssemblyPath(_loadAssemblyFileName);
+                PluginType = GetPluginType();
 
-            PluginType.BaseType?.GetProperty(nameof(CodeDeckPlugin.PluginPath))?.SetValue(null, PluginPath);
-            PluginType.GetMethod("Loaded")?.Invoke(null, null);
-        }
-
-        public void LoadAllLibraries()
-        {
-            if (!Directory.Exists(LibrariesPath)) return;
-
-            var trustedPlatformAssemblyFileNames = GetTrustedPlatformAssemblyFileNames();
-            var assemblies = Directory.GetFiles(LibrariesPath, "*.dll", SearchOption.AllDirectories);
-            foreach (var assembly in assemblies)
-            {
-                if (trustedPlatformAssemblyFileNames.Contains(Path.GetFileName(assembly))) continue;
-
-                try
+                if (PluginType is null)
                 {
-                    LoadFromAssemblyPath(Path.GetFullPath(assembly));
+                    _logger.LogWarning($"<{nameof(Plugin)}.{nameof(LoadPluginAsync)}> Assembly '{Name}' does not contain a valid plugin.");
+                    return;
                 }
-                catch (Exception e)
+
+                PluginInstance = Activator.CreateInstance(PluginType) as CodeDeckPlugin;
+                if (PluginInstance is null)
                 {
-                    _logger.LogWarning($"<{nameof(Plugin)}.{nameof(LoadAllLibraries)}> Error while loading library: '{Path.GetFullPath(assembly)}'. Exception: {e.Message}");
+                    _logger.LogWarning($"<{nameof(Plugin)}.{nameof(LoadPluginAsync)}> Could not create plugin '{Name}'.");
+                    PluginType = null;
+                    return;
                 }
-            }
-        }
 
-        public List<FileInfo> GetAllSourceFiles()
-        {
-            var sourceFiles = Directory.GetFiles(PluginPath, "*.cs", SearchOption.AllDirectories);
-            var sourceFilesInfo = sourceFiles.Select(x => new FileInfo(x));
-
-            return sourceFilesInfo.ToList();
-        }
-
-        private static List<string> GetTrustedPlatformAssemblyPaths()
-        {
-            return ((string)(AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""))
-                .Split(Path.PathSeparator)
-                .ToList();
-        }
-
-        private static HashSet<string> GetTrustedPlatformAssemblyFileNames()
-        {
-            return GetTrustedPlatformAssemblyPaths()
-                .Select(Path.GetFileName)
-                .Where(fileName => fileName is not null)
-                .Select(fileName => fileName!)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        }
-
-        public bool IsAssemblyUpToDate()
-        {
-            if (AssemblyFileInfo is null || SourceFiles is null) return false;
-
-            var assemblyWriteTime = AssemblyFileInfo.LastWriteTimeUtc;
-            var latestSourceFileWriteTime = SourceFiles
-                .OrderByDescending(x => x.LastWriteTimeUtc)
-                .First().LastWriteTimeUtc;
-
-            return assemblyWriteTime > latestSourceFileWriteTime;
-        }
-
-        public bool CompilePlugin()
-        {
-            if (SourceFiles is null || !SourceFiles.Any()) return false;
-
-            // Read all source files and parse into syntax trees
-            var syntaxTrees = new List<SyntaxTree>();
-            foreach (var sf in SourceFiles)
-            {
-                var data = File.ReadAllBytes(sf.FullName);
-                var sourceText = SourceText.From(data, data.Length, Encoding.UTF8, SourceHashAlgorithm.Sha1, false, true);
-                var syntaxTree = CSharpSyntaxTree.ParseText(sourceText, null, sf.FullName);
-
-                syntaxTrees.Add(syntaxTree);
-            }
-
-            // Get trusted assemblies
-            var trustedAssembliesPaths = GetTrustedPlatformAssemblyPaths();
-            var trustedPlatformAssemblyFileNames = GetTrustedPlatformAssemblyFileNames();
-
-            // Get assemblies in the libraries directory
-            if (Directory.Exists(LibrariesPath))
-            {
-                trustedAssembliesPaths.AddRange(Directory
-                    .GetFiles(LibrariesPath, "*.dll", SearchOption.AllDirectories)
-                    .Where(path => !trustedPlatformAssemblyFileNames.Contains(Path.GetFileName(path))));
-            }
-
-            // Convert all assembly paths into references
-            var references = trustedAssembliesPaths
-                .Select(p => MetadataReference.CreateFromFile(p))
-                .ToList();
-
-            // Create the compilation
-            var compilation = CSharpCompilation.Create(
-                Name,
-                syntaxTrees,
-                references,
-                new CSharpCompilationOptions(
-                    OutputKind.DynamicallyLinkedLibrary,
-                    platform: Platform.AnyCpu,
-                    nullableContextOptions: NullableContextOptions.Enable));
-
-            // Try to compile and emit assembly and PDB 
-            using var assemblyStream = File.Create(AssemblyFileName);
-            using var pdbStream = File.Create(PdbFileName);
-            var emitResult = compilation.Emit(assemblyStream, pdbStream,
-                options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
-
-            if (!emitResult.Success)
-            {
-                // When the compilation fails, it leaves behind zero byte files, remove them
-                assemblyStream.Close();
-                pdbStream.Close();
-                if (File.Exists(AssemblyFileName)) File.Delete(AssemblyFileName);
-                if (File.Exists(PdbFileName)) File.Delete(PdbFileName);
-
-                foreach (var d in emitResult.Diagnostics)
+                if (_configuration?.Settings is not null)
                 {
-                    _logger.LogError($"<{nameof(Plugin)}.{nameof(CompilePlugin)}> Error: {d.Location}: {d.GetMessage()}");
+                    MapSettings(_configuration.Settings, PluginType, PluginInstance);
                 }
-                return false;
+
+                await PluginInstance.InitializePluginAsync(Context, Context.CancellationToken);
+                _logger.LogInformation($"<{nameof(Plugin)}.{nameof(LoadPluginAsync)}> Loaded plugin '{Name}'.");
+            }
+            catch (Exception e)
+            {
+                PluginInstance = null;
+                PluginType = null;
+                TryDeleteCacheDirectory();
+                _logger.LogError($"<{nameof(Plugin)}.{nameof(LoadPluginAsync)}> Could not load plugin '{Name}'. Exception: {e.Message}");
+            }
+        }
+
+        private string CreateLoadAssemblyFileName()
+        {
+            foreach (var file in Directory.EnumerateFiles(PluginPath, "*", SearchOption.AllDirectories))
+            {
+                var destinationFileName = Path.Combine(CacheDirectory, Path.GetRelativePath(PluginPath, file));
+                var destinationDirectory = Path.GetDirectoryName(destinationFileName);
+                if (destinationDirectory is not null) Directory.CreateDirectory(destinationDirectory);
+
+                File.Copy(file, destinationFileName);
             }
 
-            return true;
+            return Path.Combine(CacheDirectory, $"{Name}.dll");
+        }
+
+        /// <summary>
+        /// Removes shadow copies left behind by previous runs. Safe to call at startup,
+        /// before any plugin has been loaded, because nothing holds those files then.
+        /// </summary>
+        public static void CleanCacheRoot(ILogger logger)
+        {
+            if (!Directory.Exists(CacheRootDirectory)) return;
+
+            try
+            {
+                Directory.Delete(CacheRootDirectory, true);
+                logger.LogInformation($"<{nameof(Plugin)}.{nameof(CleanCacheRoot)}> Removed stale plugin shadow copies.");
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning($"<{nameof(Plugin)}.{nameof(CleanCacheRoot)}> Could not remove '{CacheRootDirectory}'. Exception: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Best effort: the assemblies stay mapped until the collectible load context is
+        /// actually collected, so this usually only succeeds for plugins that never
+        /// loaded. Whatever survives is removed by <see cref="CleanCacheRoot"/> next start.
+        /// </summary>
+        private void TryDeleteCacheDirectory()
+        {
+            if (!Directory.Exists(CacheDirectory)) return;
+
+            try
+            {
+                Directory.Delete(CacheDirectory, true);
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug($"<{nameof(Plugin)}.{nameof(TryDeleteCacheDirectory)}> Deferred cleanup of '{CacheDirectory}'. Exception: {e.Message}");
+            }
+        }
+
+        protected override Assembly? Load(AssemblyName assemblyName)
+        {
+            if (assemblyName.Name is not null && SharedAssemblyNames.Contains(assemblyName.Name))
+            {
+                return AssemblyLoadContext.Default.Assemblies
+                    .FirstOrDefault(assembly => assembly.GetName().Name == assemblyName.Name)
+                    ?? AssemblyLoadContext.Default.LoadFromAssemblyName(assemblyName);
+            }
+
+            var resolver = _assemblyDependencyResolver
+                ?? throw new InvalidOperationException("The plugin dependency resolver has not been initialized.");
+            var assemblyPath = resolver.ResolveAssemblyToPath(assemblyName);
+            return assemblyPath is null ? null : LoadFromAssemblyPath(assemblyPath);
         }
 
         private Type? GetPluginType()
         {
             if (Assembly is null) return null;
 
-            var pluginType = Assembly
+            return Assembly
                 .GetTypes()
-                .FirstOrDefault(x => x.BaseType != null && x.BaseType.Equals(typeof(CodeDeckPlugin)));
-
-            return pluginType;
+                .FirstOrDefault(type => type.BaseType == typeof(CodeDeckPlugin));
         }
 
         public Tile? CreateTileInstance(string tileTypeName, Dictionary<string, string>? settings)
         {
-            if (PluginType is null)
-            {
-                return null;
-            }
+            if (PluginType is null) return null;
 
             var tileType = PluginType
                 .GetNestedTypes()
-                .Where(x => x.BaseType == typeof(Tile))
-                .Where(x => x.Name == tileTypeName)
-                .FirstOrDefault();
+                .FirstOrDefault(type => type.BaseType == typeof(Tile) && type.Name == tileTypeName);
 
-            if (tileType is null)
+            if (tileType is null || Activator.CreateInstance(tileType) is not Tile tileInstance)
             {
                 return null;
             }
 
-            if (Activator.CreateInstance(tileType) is not Tile tileInstance)
-            {
-                return null;
-            }
-
-            if (settings != null)
+            if (settings is not null)
             {
                 MapSettings(settings, tileType, tileInstance);
             }
@@ -255,71 +232,78 @@ namespace CodeDeck
             return tileInstance;
         }
 
-        /// <summary>
-        /// This method maps a Dictionary of settings to the relevant properties of a class.
-        /// The destination object might be a static class or a class instance.
-        /// Note to self: This method is not generic because we're working with types loaded at runtime.
-        /// </summary>
-        /// <param name="settings"></param>
-        /// <param name="type"></param>
-        /// <param name="instance"></param>
+        public async Task UnloadPluginAsync()
+        {
+            Cancel();
+            try
+            {
+                await Context.StopTasksAsync();
+            }
+            finally
+            {
+                try
+                {
+                    await Context.DisposeSharedStateAsync();
+                }
+                finally
+                {
+                    Assembly = null;
+                    PluginType = null;
+                    PluginInstance = null;
+                    _cancellationTokenSource.Dispose();
+                    Unload();
+                    TryDeleteCacheDirectory();
+                    _logger.LogInformation($"<{nameof(Plugin)}.{nameof(UnloadPluginAsync)}> Released plugin '{Name}' for unloading.");
+                }
+            }
+        }
+
+        public void Cancel()
+        {
+            if (_cancellationTokenSource.IsCancellationRequested) return;
+
+            _logger.LogInformation($"<{nameof(Plugin)}.{nameof(Cancel)}> Cancelling plugin '{Name}'.");
+            _cancellationTokenSource.Cancel();
+        }
+
         private void MapSettings(Dictionary<string, string>? settings, Type type, object? instance = null)
         {
-            // Assign the raw key settings dictionary to the instance or static class
-            type.BaseType?.GetProperty("Settings")?.SetValue(instance, settings);
-
-            // Map settings to properties that are annotated with the SettingAttribute
-
-            // Get all properties with the SettingAttribute
-            var settingProperties = type.GetProperties()
-                .Where(x => x.CustomAttributes.Any(ca => ca.AttributeType.Name == nameof(SettingAttribute)));
-
-            // Try to parse the setting into the correct type and assign the value to the property
-            foreach (var p in settingProperties)
+            if (instance is Tile tile)
             {
-                if (settings?.TryGetValue(p.Name, out var value) ?? false)
+                tile.Settings = settings;
+            }
+
+            var settingProperties = type.GetProperties()
+                .Where(property => property.CustomAttributes.Any(attribute =>
+                    attribute.AttributeType.Name == nameof(SettingAttribute)));
+
+            foreach (var property in settingProperties)
+            {
+                if (!(settings?.TryGetValue(property.Name, out var value) ?? false)) continue;
+
+                if (property.PropertyType == typeof(string))
                 {
-                    // Parse string
-                    if (p.PropertyType.Name == typeof(string).Name)
-                    {
-                        p.SetValue(instance, value);
-                    }
-                    // Parse bool
-                    else if (p.PropertyType == typeof(bool?) || p.PropertyType == typeof(bool))
-                    {
-                        if (bool.TryParse(value, out var parsedValue))
-                        {
-                            p.SetValue(instance, parsedValue);
-                        }
-                    }
-                    // Parse byte
-                    else if (p.PropertyType == typeof(byte?) || p.PropertyType == typeof(byte))
-                    {
-                        if (byte.TryParse(value, out var parsedValue))
-                        {
-                            p.SetValue(instance, parsedValue);
-                        }
-                    }
-                    // Parse int
-                    else if (p.PropertyType == typeof(int?) || p.PropertyType == typeof(int))
-                    {
-                        if (int.TryParse(value, out var parsedValue))
-                        {
-                            p.SetValue(instance, parsedValue);
-                        }
-                    }
-                    // Parse double
-                    else if (p.PropertyType == typeof(double?) || p.PropertyType == typeof(double))
-                    {
-                        if (double.TryParse(value, out var parsedValue))
-                        {
-                            p.SetValue(instance, parsedValue);
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogWarning($"<{nameof(Plugin)}.{nameof(MapSettings)}> Can not map setting '{p.Name}' because data type '{p.PropertyType.Name}' is not supported.");
-                    }
+                    property.SetValue(instance, value);
+                }
+                else if (property.PropertyType == typeof(bool?) || property.PropertyType == typeof(bool))
+                {
+                    if (bool.TryParse(value, out var parsedValue)) property.SetValue(instance, parsedValue);
+                }
+                else if (property.PropertyType == typeof(byte?) || property.PropertyType == typeof(byte))
+                {
+                    if (byte.TryParse(value, out var parsedValue)) property.SetValue(instance, parsedValue);
+                }
+                else if (property.PropertyType == typeof(int?) || property.PropertyType == typeof(int))
+                {
+                    if (int.TryParse(value, out var parsedValue)) property.SetValue(instance, parsedValue);
+                }
+                else if (property.PropertyType == typeof(double?) || property.PropertyType == typeof(double))
+                {
+                    if (double.TryParse(value, out var parsedValue)) property.SetValue(instance, parsedValue);
+                }
+                else
+                {
+                    _logger.LogWarning($"<{nameof(Plugin)}.{nameof(MapSettings)}> Cannot map setting '{property.Name}' because data type '{property.PropertyType.Name}' is not supported.");
                 }
             }
         }

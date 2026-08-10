@@ -1,5 +1,4 @@
 ﻿using HidSharp;
-using System.Diagnostics;
 
 /// <summary>
 /// Based on rivalcfg: https://github.com/flozz/rivalcfg/blob/master/rivalcfg/devices/rival3_wireless.py
@@ -18,7 +17,11 @@ public class SteelSeriesRival3Wireless : CodeDeckPlugin
         {
             _device = FindDevice();
 
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunEvery(
+                "Battery poll",
+                TimeSpan.FromMilliseconds(Interval ?? 10 * 60 * 1000),
+                GetAsync,
+                cancellationToken: cancellationToken);
 
             await Task.CompletedTask;
         }
@@ -69,21 +72,6 @@ public class SteelSeriesRival3Wireless : CodeDeckPlugin
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    Debug.WriteLine($"{nameof(BackgroundTask)} in {nameof(BatteryTile)} was cancelled!");
-                    return;
-                }
-
-                GetAsync(cancellationToken).Wait(cancellationToken);
-                await Task.Delay(Interval ?? 10 * 60 * 1000, cancellationToken);
             }
         }
     }

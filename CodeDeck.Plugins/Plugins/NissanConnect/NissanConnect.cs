@@ -8,22 +8,23 @@ namespace CodeDeck.Plugins.Plugins.Runner
 {
     public class NissanConnect : CodeDeckPlugin
     {
-        [Setting] public static string? Email { get; set; }
-        [Setting] public static string? Password { get; set; }
+        [Setting] public string? Email { get; set; }
+        [Setting] public string? Password { get; set; }
 
-        private static string? _tokenCacheFile = null;
+        private static string _tokenCacheFile = string.Empty;
 
         private static NissanConnectClient _client = new();
         private static string? _userId = null;
 
 
-        public static void Loaded()
+        public override Task InitializeAsync(PluginContext context, CancellationToken cancellationToken)
         {
-            _tokenCacheFile = Path.Combine(PluginPath, "token.cache");
-            _ = InitAsync();
+            _tokenCacheFile = Path.Combine(context.PluginPath, "token.cache");
+            RunTask("Nissan Connect initialization", token => InitAsync(Email, Password, token));
+            return Task.CompletedTask;
         }
 
-        private static async Task InitAsync()
+        private static async Task InitAsync(string? email, string? password, CancellationToken cancellationToken)
         {
             // Instantiate client
             _client = new NissanConnectClient(NissanConnectLib.Configuration.Region.EU);
@@ -59,9 +60,9 @@ namespace CodeDeck.Plugins.Plugins.Runner
             if (!loggedIn)
             {
                 // Log in using a username and password
-                if (Email is not null && Password is not null)
+                if (email is not null && password is not null)
                 {
-                    loggedIn = await _client.LogIn(Email, Password);
+                    loggedIn = await _client.LogIn(email, password);
                     if (loggedIn)
                     {
                         Debug.WriteLine("Logged in using username and password. Writing token to cache file...");
@@ -85,13 +86,13 @@ namespace CodeDeck.Plugins.Plugins.Runner
             Debug.WriteLine($"Logged in as: {_userId}");
         }
 
-        private static async Task<Car?> GetCar(string? nickName)
+        private static async Task<Car?> GetCar(string? nickName, CancellationToken cancellationToken)
         {
             // TODO: Fix this hack to prevent first tile Update calls to fail
             // Wait until logged in
             while (_userId is null)
             {
-                await Task.Delay(1000);
+                await Task.Delay(1000, cancellationToken);
             }
 
             var cars = await _client.GetCars(_userId);
@@ -118,22 +119,22 @@ namespace CodeDeck.Plugins.Plugins.Runner
             {
                 await base.Init(cancellationToken);
                 Text = "Nissan\nConnect\nBattery\nLevel";
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+                RunEvery("Battery level update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
             }
 
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
-                await Update(ForceRefreshTilePress);
+                await Update(ForceRefreshTilePress, cancellationToken);
                 await base.OnTilePressDown(cancellationToken);
             }
 
-            private async Task Update(bool forceRefresh)
+            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
             {
                 try
                 {
                     ShowIndicator = true;
 
-                    _car = await GetCar(NickName);
+                    _car = await GetCar(NickName, cancellationToken);
 
                     if (_car is not null && _car.Vin is not null)
                     {
@@ -160,16 +161,6 @@ namespace CodeDeck.Plugins.Plugins.Runner
                 }
             }
 
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested) return;
-
-                    await Update(ForceRefreshAuto);
-                    await Task.Delay(Interval * 60 * 1000, cancellationToken);
-                }
-            }
         }
 
         public class NissanConnectRangeTile : Tile
@@ -187,22 +178,22 @@ namespace CodeDeck.Plugins.Plugins.Runner
             {
                 await base.Init(cancellationToken);
                 Text = "Nissan\nConnect\nBattery\nLevel";
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+                RunEvery("Range update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
             }
 
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
-                await Update(ForceRefreshTilePress);
+                await Update(ForceRefreshTilePress, cancellationToken);
                 await base.OnTilePressDown(cancellationToken);
             }
 
-            private async Task Update(bool forceRefresh)
+            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
             {
                 try
                 {
                     ShowIndicator = true;
 
-                    _car = await GetCar(NickName);
+                    _car = await GetCar(NickName, cancellationToken);
 
                     if (_car is not null && _car.Vin is not null)
                     {
@@ -228,16 +219,6 @@ namespace CodeDeck.Plugins.Plugins.Runner
                 }
             }
 
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested) return;
-
-                    await Update(ForceRefreshAuto);
-                    await Task.Delay(Interval * 60 * 1000, cancellationToken);
-                }
-            }
         }
 
         public class NissanConnectBatteryStatusAge : Tile
@@ -256,18 +237,18 @@ namespace CodeDeck.Plugins.Plugins.Runner
             public override async Task Init(CancellationToken cancellationToken)
             {
                 Text = "Nissan\nConnect\nBattery\nStatus";
-                _car = await GetCar(NickName);
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+                _car = await GetCar(NickName, cancellationToken);
+                RunEvery("Battery status age update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
                 await base.Init(cancellationToken);
             }
 
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
-                await Update(ForceRefreshTilePress);
+                await Update(ForceRefreshTilePress, cancellationToken);
                 await base.OnTilePressDown(cancellationToken);
             }
 
-            private async Task Update(bool forceRefresh)
+            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
             {
                 try
                 {
@@ -299,15 +280,6 @@ namespace CodeDeck.Plugins.Plugins.Runner
                 }
             }
 
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested) return;
-                    await Update(ForceRefreshAuto);
-                    await Task.Delay(Interval * 60 * 1000, cancellationToken);
-                }
-            }
         }
 
         public class NissanConnectChargeStatus : Tile
@@ -326,18 +298,18 @@ namespace CodeDeck.Plugins.Plugins.Runner
             public override async Task Init(CancellationToken cancellationToken)
             {
                 Text = "Nissan\nConnect\nCharge\nStatus";
-                _car = await GetCar(NickName);
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+                _car = await GetCar(NickName, cancellationToken);
+                RunEvery("Charge status update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
                 await base.Init(cancellationToken);
             }
 
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
-                await Update(ForceRefreshTilePress);
+                await Update(ForceRefreshTilePress, cancellationToken);
                 await base.OnTilePressDown(cancellationToken);
             }
 
-            private async Task Update(bool forceRefresh)
+            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
             {
                 try
                 {
@@ -382,15 +354,6 @@ namespace CodeDeck.Plugins.Plugins.Runner
                 }
             }
 
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested) return;
-                    await Update(ForceRefreshAuto);
-                    await Task.Delay(Interval * 60 * 1000, cancellationToken);
-                }
-            }
         }
     }
 }

@@ -1,6 +1,5 @@
 using CodeDeck.Models.Configuration;
 using CodeDeck.Services;
-using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using OpenMacroBoard.SDK;
@@ -11,6 +10,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp;
 using StreamDeckSharp;
+using System.Collections.Concurrent;
 
 namespace CodeDeck
 {
@@ -23,11 +23,14 @@ namespace CodeDeck
         private readonly ProcessMonitor _processMonitor;
         private readonly IMacroBoard _streamDeck;
         private readonly PluginLoader _pluginLoader;
-        private readonly List<KeyWrapper> _keyWrappers = new();
+        private IReadOnlyList<KeyWrapper> _keyWrappers = Array.Empty<KeyWrapper>();
+        private readonly object _keyWrappersLock = new();
         private readonly FontCollection _fontCollection = new();
+        private readonly ConcurrentDictionary<(string, float, FontStyle), Font> _fontCache = new();
         private readonly Stack<NavigationItem> _navigationStack = new();
+        private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
         private NavigationItem? _currentPage;
-        private bool _applyingConfiguration = false;
+        private int _stopping;
 
 
         public StreamDeckManager(
@@ -43,6 +46,7 @@ namespace CodeDeck
             _pluginLoader = pluginLoader;
 
             _configurationProvider.ConfigurationChanged += ConfigurationProvider_ConfigurationChanged;
+            _pluginLoader.PluginsChanged += PluginLoader_PluginsChanged;
 
             _fontCollection.AddSystemFonts();
             _fontCollection.Add("Fonts/Twemoji.Mozilla.ttf");
@@ -80,7 +84,10 @@ namespace CodeDeck
         private void ProcessMonitor_ProcessStarted(object? sender, string e)
         {
             var flatKeyConfiguration = _configurationProvider.LoadedFlatConfiguration
-                .FirstOrDefault(x => x.Page.ProcessStartedTrigger?.ToLower() == e);
+                .FirstOrDefault(x => string.Equals(
+                    x.Page.ProcessStartedTrigger,
+                    e,
+                    StringComparison.OrdinalIgnoreCase));
 
             if (flatKeyConfiguration is null) return;
 
@@ -92,7 +99,10 @@ namespace CodeDeck
             if (_currentPage is null) return;
 
             var flatKeyConfiguration = _configurationProvider.LoadedFlatConfiguration
-                .FirstOrDefault(x => x.Page.ProcessStartedTrigger?.ToLower() == e);
+                .FirstOrDefault(x => string.Equals(
+                    x.Page.ProcessStartedTrigger,
+                    e,
+                    StringComparison.OrdinalIgnoreCase));
             if (flatKeyConfiguration is null) return;
 
             // If ProcessStartedTriggerNavigatePreviousOnExit is true and the current page is the
@@ -159,7 +169,7 @@ namespace CodeDeck
 
         private void StreamDeck_KeyStateChanged(object? sender, KeyEventArgs e)
         {
-            var keyWrapper = _keyWrappers
+            var keyWrapper = KeyWrappers
                 .Where(x => x.IsShowing)
                 .Where(x => x.Key.Index == e.Key)
                 .FirstOrDefault();
@@ -228,21 +238,112 @@ namespace CodeDeck
         /// <param name="e"></param>
         private async void ConfigurationProvider_ConfigurationChanged(object? sender, EventArgs e)
         {
-            if (_applyingConfiguration) return;
-            _applyingConfiguration = true;
+            try
+            {
+                await ReapplyPluginsAndConfiguration();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to apply the updated configuration.");
+            }
+        }
 
-            _processMonitor.Stop();
-            await DestroyKeyWrappers();
-            await ApplyConfiguration();
-            _processMonitor.Start();
+        private async void PluginLoader_PluginsChanged(object? sender, IReadOnlyCollection<string> pluginNames)
+        {
+            try
+            {
+                await ReloadPlugins(pluginNames);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to reload changed plugins.");
+            }
+        }
 
-            _applyingConfiguration = false;
+        private async Task ReapplyPluginsAndConfiguration()
+        {
+            if (!await TryEnterLifecycleAsync()) return;
+
+            try
+            {
+                _processMonitor.Stop();
+                await DestroyKeyWrappers();
+                await _pluginLoader.LoadAllPluginsAsync();
+                await ApplyConfiguration();
+                _processMonitor.Start();
+            }
+            finally
+            {
+                _lifecycleLock.Release();
+            }
+        }
+
+        private async Task ReloadPlugins(IReadOnlyCollection<string> pluginNames)
+        {
+            if (!await TryEnterLifecycleAsync()) return;
+
+            try
+            {
+                var reloadResults = await Task.WhenAll(pluginNames
+                    .Select(_pluginLoader.TryReloadPluginAsync));
+
+                var reloadedPluginNames = reloadResults
+                    .OfType<PluginReloadResult>()
+                    .Select(result => result.PluginName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                if (!reloadedPluginNames.Any()) return;
+
+                var previousPlugins = reloadResults
+                    .OfType<PluginReloadResult>()
+                    .Select(result => result.PreviousPlugin)
+                    .Where(plugin => plugin is not null)
+                    .Cast<Plugin>()
+                    .ToHashSet();
+
+                previousPlugins.ToList().ForEach(plugin => plugin.Cancel());
+
+                // Select by plugin name rather than by Plugin instance, so that key
+                // wrappers created while the plugin was unavailable (Plugin == null)
+                // are also destroyed instead of being duplicated below.
+                var affectedKeyWrappers = KeyWrappers
+                    .Where(keyWrapper => keyWrapper.Key.Plugin is not null
+                        && reloadedPluginNames.Contains(keyWrapper.Key.Plugin))
+                    .ToList();
+
+                await DestroyKeyWrappers(affectedKeyWrappers);
+                await Task.WhenAll(previousPlugins.Select(plugin => plugin.UnloadPluginAsync()));
+                _logger.LogInformation($"Unloaded {previousPlugins.Count} replaced plugin(s).");
+
+                var affectedConfigurations = _configurationProvider.LoadedFlatConfiguration
+                    .Where(configuration => configuration.Key.Plugin is not null
+                        && reloadedPluginNames.Contains(configuration.Key.Plugin));
+
+                await CreateKeyWrappers(affectedConfigurations);
+                RefreshPage();
+            }
+            finally
+            {
+                _lifecycleLock.Release();
+            }
         }
 
         public async Task Start()
         {
-            await ApplyConfiguration();
-            _processMonitor.Start();
+            // Held for the whole startup so that plugin or configuration change events
+            // (the file system watchers are already armed at this point) cannot run a
+            // reload concurrently with the initial load.
+            await _lifecycleLock.WaitAsync();
+            try
+            {
+                await _pluginLoader.LoadAllPluginsAsync();
+                await ApplyConfiguration();
+                _processMonitor.Start();
+            }
+            finally
+            {
+                _lifecycleLock.Release();
+            }
         }
 
         public async Task ApplyConfiguration()
@@ -258,8 +359,8 @@ namespace CodeDeck
             _configurationProvider.LoadedFlatConfiguration
                 .Select(x => x.Page)
                 .Distinct()
-                .Where(x => x.ProcessStartedTrigger is not null)
                 .Select(x => x.ProcessStartedTrigger)
+                .OfType<string>()
                 .ToList()
                 .ForEach(x => _processMonitor.Add(x));
 
@@ -295,11 +396,16 @@ namespace CodeDeck
             }
         }
 
-        public async Task CreateKeyWrappers()
+        public Task CreateKeyWrappers()
+        {
+            return CreateKeyWrappers(_configurationProvider.LoadedFlatConfiguration);
+        }
+
+        private async Task CreateKeyWrappers(IEnumerable<Models.FlatKeyConfiguration> flatKeyConfigurations)
         {
             // Instantiate all wrappers based on configuration
             var keyWrappers = (
-                from flatKeyConfiguration in _configurationProvider.LoadedFlatConfiguration
+                from flatKeyConfiguration in flatKeyConfigurations
                 let plugin = _pluginLoader.LoadedPlugins.FirstOrDefault(x => x.Name == flatKeyConfiguration.Key.Plugin)
                 let keyWrapper = new KeyWrapper(_logger, flatKeyConfiguration.Profile, flatKeyConfiguration.Page, flatKeyConfiguration.Key, plugin)
                 orderby keyWrapper.Key.Index
@@ -308,39 +414,112 @@ namespace CodeDeck
 
             // Try to load the image specified for a key
             // This must be done here because not all keys are associated with a tile
-            keyWrappers.ForEach(x =>
-            {
-                if (x.Key.Image != null) x.Image = SafeLoadImage(x.Key.Image, true);
-            });
+            await Task.WhenAll(keyWrappers
+                .Where(keyWrapper => keyWrapper.Key.Image is not null)
+                .Select(async keyWrapper =>
+                {
+                    keyWrapper.Image = await Task.Run(() => SafeLoadImage(keyWrapper.Key.Image!, true));
+                }));
 
-            // Instantiate all tiles in parallell and wait for all to finish
+            // Initialize tiles concurrently, including synchronous work before their first await.
             await Task.WhenAll(keyWrappers
                 .Where(x => x.Plugin != null)
-                .Select(x => x.InstantiateTileObjectAsync()));
+                .Select(keyWrapper => Task.Run(keyWrapper.InstantiateTileObjectAsync)));
 
             // Bind all event handlers last to prevent unnecessary
             // key updates during init and draw all keys at the same time
             keyWrappers.ForEach(x => x.Updated += KeyWrapper_Updated);
 
             // Keep wrappers for later
-            _keyWrappers.AddRange(keyWrappers);
+            AddKeyWrappers(keyWrappers);
+        }
+
+        /// <summary>
+        /// The current key wrappers. Readers must enumerate the returned snapshot,
+        /// which is swapped atomically by <see cref="AddKeyWrappers"/> and
+        /// <see cref="RemoveKeyWrappers"/> so device and navigation threads never
+        /// observe a partially updated collection.
+        /// </summary>
+        private IReadOnlyList<KeyWrapper> KeyWrappers => Volatile.Read(ref _keyWrappers);
+
+        private void AddKeyWrappers(IEnumerable<KeyWrapper> keyWrappers)
+        {
+            lock (_keyWrappersLock)
+            {
+                Volatile.Write(ref _keyWrappers, _keyWrappers.Concat(keyWrappers).ToArray());
+            }
+        }
+
+        private void RemoveKeyWrappers(IEnumerable<KeyWrapper> keyWrappers)
+        {
+            var removed = keyWrappers.ToHashSet();
+
+            lock (_keyWrappersLock)
+            {
+                Volatile.Write(ref _keyWrappers,
+                    _keyWrappers.Where(keyWrapper => !removed.Contains(keyWrapper)).ToArray());
+            }
         }
 
         public async Task DestroyKeyWrappers()
         {
-            // Remove all event handlers and cancel all running tasks
-            _keyWrappers.ForEach(keyWrapper =>
+            await DestroyKeyWrappers(KeyWrappers.ToList());
+        }
+
+        private async Task DestroyKeyWrappers(List<KeyWrapper> keyWrappers)
+        {
+            if (!keyWrappers.Any()) return;
+
+            _logger.LogInformation($"Deinitializing {keyWrappers.Count} tile(s).");
+            keyWrappers.ForEach(keyWrapper =>
             {
                 keyWrapper.Updated -= KeyWrapper_Updated;
-                keyWrapper.CancellationTokenSource.Cancel();
+                keyWrapper.Cancel();
             });
 
-            // DeInit all Tiles
-            await Task.WhenAll(_keyWrappers
-                .Where(x => x.Plugin != null)
-                .Select(x => x.Tile?.DeInit() ?? Task.CompletedTask));
+            await Task.WhenAll(keyWrappers
+                .Select(keyWrapper => keyWrapper.DeinitializeAsync()));
 
-            _keyWrappers.Clear();
+            keyWrappers.ForEach(keyWrapper => keyWrapper.Dispose());
+            RemoveKeyWrappers(keyWrappers);
+        }
+
+        public async Task StopAsync()
+        {
+            if (Interlocked.Exchange(ref _stopping, 1) != 0) return;
+
+            _logger.LogInformation("Stopping Stream Deck manager.");
+
+            // Cancel before taking the lifecycle lock: a reload in progress may be
+            // blocked inside a tile's Init until its token is cancelled, and would
+            // otherwise never release the lock.
+            _processMonitor.Stop();
+            _pluginLoader.CancelAllPlugins();
+
+            await _lifecycleLock.WaitAsync();
+
+            try
+            {
+                await DestroyKeyWrappers();
+                await _pluginLoader.UnloadAllPluginsAsync();
+                ClearKeys();
+                _logger.LogInformation("Stream Deck manager stopped.");
+            }
+            finally
+            {
+                _lifecycleLock.Release();
+            }
+        }
+
+        private async Task<bool> TryEnterLifecycleAsync()
+        {
+            if (Volatile.Read(ref _stopping) != 0) return false;
+            await _lifecycleLock.WaitAsync();
+
+            if (Volatile.Read(ref _stopping) == 0) return true;
+
+            _lifecycleLock.Release();
+            return false;
         }
 
         /// <summary>
@@ -405,16 +584,18 @@ namespace CodeDeck
         public void RefreshPage()
         {
             _streamDeck.ClearKeys();
-            
+
             if (_currentPage is null) return;
 
             // Update IsShowing property
-            _keyWrappers.ForEach((k) => {
+            var keyWrappers = KeyWrappers;
+            foreach (var k in keyWrappers)
+            {
                 k.IsShowing = k.Profile.Name == _currentPage.ProfileName && k.Page.Name == _currentPage.PageName;
-            });
+            }
 
-            var keyWrappersForCurrentPage = _keyWrappers.Where(x => x.IsShowing);
-            if (keyWrappersForCurrentPage is null || !keyWrappersForCurrentPage.Any()) return;
+            var keyWrappersForCurrentPage = keyWrappers.Where(x => x.IsShowing).ToList();
+            if (!keyWrappersForCurrentPage.Any()) return;
 
             foreach (var keyWrapper in keyWrappersForCurrentPage)
             {
@@ -458,9 +639,24 @@ namespace CodeDeck
 
         public KeyBitmap CreateKeyBitmap(KeyWrapper keyWrapper)
         {
-            return KeyBitmap.Create.FromImageSharpImage(CreateTileBitmap(keyWrapper));
-
+            lock (keyWrapper.RenderLock)
+            {
+                // The composed tile bitmap is only an intermediate: KeyBitmap copies the
+                // pixel data out of it. Disposing returns the buffer to ImageSharp's pool
+                // instead of leaving it for the finalizer.
+                using var tileBitmap = CreateTileBitmap(keyWrapper);
+                return KeyBitmap.Create.FromImageSharpImage(tileBitmap);
+            }
         }
+
+        /// <summary>
+        /// Fonts are immutable and reusable, but building one parses font metrics.
+        /// Caching avoids doing that on every key redraw.
+        /// </summary>
+        private Font GetFont(FontFamily fontFamily, float fontSize, FontStyle fontStyle)
+            => _fontCache.GetOrAdd(
+                (fontFamily.Name, fontSize, fontStyle),
+                key => fontFamily.CreateFont(key.Item2, key.Item3));
 
         private Image CreateTileBitmap(KeyWrapper keyWrapper)
         {
@@ -496,9 +692,13 @@ namespace CodeDeck
             // Add image
             if (image != null)
             {
-                image.Mutate(i => i.Resize(_streamDeck.Keys.KeySize - (imagePadding * 2),
-                    _streamDeck.Keys.KeySize - (imagePadding * 2)));
-                i.Mutate(x => x.DrawImage(image, new Point(imagePadding + imageOffsetX, imagePadding + imageOffsetY), 1f));
+                var targetSize = _streamDeck.Keys.KeySize - (imagePadding * 2);
+
+                // Previously this resized the caller's image in place on every draw,
+                // which re-ran the resampler needlessly and corrupted the plugin's
+                // own Image instance. The scaled result is cached per key instead.
+                var scaled = keyWrapper.GetScaledImage(image, targetSize);
+                i.Mutate(x => x.DrawImage(scaled, new Point(imagePadding + imageOffsetX, imagePadding + imageOffsetY), 1f));
             }
 
             // Add text
@@ -510,7 +710,7 @@ namespace CodeDeck
                     if (fontBold) fontStyle |= FontStyle.Bold;
                     if (fontItalic) fontStyle |= FontStyle.Italic;
 
-                    var f = fontFamily.CreateFont(fontSize, fontStyle);
+                    var f = GetFont(fontFamily, fontSize, fontStyle);
 
                     var center = new PointF(_streamDeck.Keys.KeySize / 2, _streamDeck.Keys.KeySize / 2);
                     var textOptions = new RichTextOptions(f)

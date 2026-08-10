@@ -23,12 +23,11 @@ public partial class LogitechMice : CodeDeckPlugin
         {
             _device = FindDevice();
 
-            _ = Task.Run(() => ReadTask(cancellationToken), cancellationToken);
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunTask("HID report reader", ReadTask);
+            RunEvery("Battery poll", TimeSpan.FromMilliseconds(Interval ?? 10 * 60 * 1000), GetBatteryInformation);
 
             Text = FormatDisconnected ?? "🖱\n❌";
-
-            await GetBatteryInformation(cancellationToken);
+            await Task.CompletedTask;
         }
 
         public override async Task OnTilePressUp(CancellationToken cancellationToken)
@@ -47,6 +46,7 @@ public partial class LogitechMice : CodeDeckPlugin
         private async Task ReadTask(CancellationToken cancellationToken)
         {
             HidStream? hidStream = null;
+            using var cancellationRegistration = cancellationToken.Register(() => hidStream?.Dispose());
             var buffer = new byte[512];
 
             while (!cancellationToken.IsCancellationRequested)
@@ -167,15 +167,6 @@ public partial class LogitechMice : CodeDeckPlugin
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                await GetBatteryInformation(cancellationToken);
-                await Task.Delay(Interval ?? 10 * 60 * 1000, cancellationToken);
             }
         }
 

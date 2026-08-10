@@ -1,5 +1,4 @@
 ﻿using HidSharp;
-using System.Diagnostics;
 
 /// <summary>
 /// HID report bytes found here:
@@ -22,7 +21,11 @@ public class HyperXCloudAlphaWireless : CodeDeckPlugin
                 .Where(x => x.GetMaxInputReportLength() == 31)
                 .FirstOrDefault();
 
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunEvery(
+                "Battery poll",
+                TimeSpan.FromMilliseconds(Interval ?? 10 * 60 * 1000),
+                GetAsync,
+                cancellationToken: cancellationToken);
 
             await Task.CompletedTask;
         }
@@ -61,21 +64,6 @@ public class HyperXCloudAlphaWireless : CodeDeckPlugin
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    Debug.WriteLine($"{nameof(BackgroundTask)} in {nameof(BatteryTile)} was cancelled!");
-                    return;
-                }
-
-                GetAsync(cancellationToken).Wait(cancellationToken);
-                await Task.Delay(Interval ?? 10 * 60 * 1000, cancellationToken);
             }
         }
     }

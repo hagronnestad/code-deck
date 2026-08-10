@@ -32,18 +32,27 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
+                _whileDownCts?.Cancel();
                 _whileDownCts = new();
-
-                await Task.Run(async () => {
-                    while (!_whileDownCts?.IsCancellationRequested ?? false)
+                RunEvery(
+                    "Volume down repeat",
+                    TimeSpan.FromMilliseconds(75),
+                    _ =>
                     {
                         keybd_event(VK_VOLUME_DOWN, 0, KEYEVENTF_EXTENTEDKEY, IntPtr.Zero);
-                        await Task.Delay(75);
-                    }
-                }, _whileDownCts.Token);
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken: _whileDownCts.Token);
+                await Task.CompletedTask;
             }
 
             public override Task OnTilePressUp(CancellationToken cancellationToken)
+            {
+                _whileDownCts?.Cancel();
+                return Task.CompletedTask;
+            }
+
+            public override Task DeInit()
             {
                 _whileDownCts?.Cancel();
                 return Task.CompletedTask;
@@ -56,18 +65,27 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
             public override async Task OnTilePressDown(CancellationToken cancellationToken)
             {
+                _whileDownCts?.Cancel();
                 _whileDownCts = new();
-
-                await Task.Run(async () => {
-                    while (!_whileDownCts?.IsCancellationRequested ?? false)
+                RunEvery(
+                    "Volume up repeat",
+                    TimeSpan.FromMilliseconds(75),
+                    _ =>
                     {
                         keybd_event(VK_VOLUME_UP, 0, KEYEVENTF_EXTENTEDKEY, IntPtr.Zero);
-                        await Task.Delay(75);
-                    }
-                }, _whileDownCts.Token);
+                        return Task.CompletedTask;
+                    },
+                    cancellationToken: _whileDownCts.Token);
+                await Task.CompletedTask;
             }
 
             public override Task OnTilePressUp(CancellationToken cancellationToken)
+            {
+                _whileDownCts?.Cancel();
+                return Task.CompletedTask;
+            }
+
+            public override Task DeInit()
             {
                 _whileDownCts?.Cancel();
                 return Task.CompletedTask;

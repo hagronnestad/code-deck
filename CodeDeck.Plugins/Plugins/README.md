@@ -1,244 +1,133 @@
 # Plugin Development
 
-**Code Deck** supports plugins. Plugins are located in the `Plugins`-directory. All plugins are coded in `C#` and gets compiled on startup using `Roslyn`. All the *"builtin"* (included in this repository) plugins work in the same way and their `C#`-scripts are available in the same `Plugins`-directory.
+Every built-in plugin is a standard .NET project located in its plugin directory. Plugins reference `CodeDeck.PluginAbstractions`, which defines `CodeDeckPlugin`, `Tile`, and `[Setting]`.
 
-- [Plugin Development](#plugin-development)
-  - [Quick Start](#quick-start)
-  - [Plugin Directory Structure](#plugin-directory-structure)
-  - [Develop A *User* Plugin](#develop-a-user-plugin)
-    - [Debugging](#debugging)
-    - [External Libraries](#external-libraries)
-    - [Nuget](#nuget)
-      - [Example From The `PerformanceCounters` Plugin](#example-from-the-performancecounters-plugin)
-  - [Develop A *Builtin* Plugin](#develop-a-builtin-plugin)
-    - [`CodeDeck.Plugins`-project](#codedeckplugins-project)
-    - [Documentation](#documentation)
+## Built-in plugin workflow
 
+Open `CodeDeck.sln` to develop CodeDeck and its built-in plugins together. Each plugin is visible as its own project and has normal NuGet restore, IntelliSense, analyzers, build output, and PDB/source mapping.
 
-## Quick Start
-It's very easy to make your own plugins for **Code Deck** by using one of the existing plugins as a template. The [Counter-plugin](Counter/Counter.cs) might be a good starting point for a minimal plugin implementation.
+Building either host project stages all plugin assemblies and their dependencies into its output directory:
 
-Have a look at the [Template-plugin](Template/Template.cs) for a more detailed overview of all the plugin features.
+```text
+CodeDeck.Windows/bin/Debug/net10.0-windows7.0/
+└── Plugins/
+    └── Clock/
+        ├── Clock.dll
+        ├── Clock.deps.json
+        └── Clock.pdb
+```
 
-Below is a summary of the plugin skeleton and features:
+CodeDeck loads these compiled assemblies directly. When the host is running, changes in the staged plugin artifacts trigger a debounced reload: existing tiles are deinitialized, the old plugin load context is unloaded, and the rebuilt assembly is loaded from a shadow copy. Shadow copying lets Windows replace plugin DLLs while CodeDeck is running.
+
+## Creating a built-in plugin
+
+Create a directory under `CodeDeck.Plugins/Plugins` containing a project named after the plugin:
+
+```text
+CodeDeck.Plugins/Plugins/MyPlugin/
+├── MyPlugin.csproj
+└── MyPlugin.cs
+```
+
+The shared `Directory.Build.props` automatically targets `net10.0`, enables nullable reference types, and references `CodeDeck.PluginAbstractions`. Add the project to `CodeDeck.sln`.
 
 ```csharp
-// A wrapper class for the Plugin
-public class Template : CodeDeckPlugin
+using CodeDeck.PluginAbstractions;
+using System.Threading;
+using System.Threading.Tasks;
+
+public class MyPlugin : CodeDeckPlugin
 {
-    // Static field that can be shared between the Tile classes
-    private static DateTime _dateTimeNow;
-
-    // A static constructor that initializes shared static fields
-    static Template()
+    public class MyTile : Tile
     {
-        _dateTimeNow = DateTime.Now;
-    }
+        [Setting] public string? Message { get; set; }
 
-    // An example of how to implement a new Tile, a Tile class MUST extend the Tile class
-    public class TemplateTileOne : Tile
-    {
-        // This property will be automatically bound to the appropriate setting from
-        // the JSON configuration file.
-        [Setting] public int? Counter { get; set; }
-
-        // The constructor for a Tile
-        // The constructor may be used for assigning private fields, but DO NOT start long
-        // running tasks in the constructor!
-        public TemplateTileOne()
+        public override Task Init(CancellationToken cancellationToken)
         {
-            Counter = 0;
+            Text = Message ?? "Hello";
+            return Task.CompletedTask;
         }
-
-        // This method is called by the plugin system when this Tile is instantiated.
-        // Use this method as you would normally use the constructor. Make sure to forward
-        // the CancellationToken to any long running tasks or background tasks.
-        public override Task Init(CancellationToken cancellationToken);
-
-        // This method is called when a key associated with this Tile is pressed
-        public override Task OnTilePressDown(CancellationToken cancellationToken);
-
-        // This method is called when a key associated with this Tile is released
-        public override Task OnTilePressUp(CancellationToken cancellationToken);
-
-        // This method is called when a Tile instance is removed
-        public override Task DeInit();
-    }
-
-
-    // A plugin my contain multiple Tile types
-    public class TemplateTileTwo : Tile
-    {
-        // A Tile can override only some of the Tile methods
-        public override Task OnTilePressDown(CancellationToken cancellationToken);
     }
 }
-
 ```
 
+Add ordinary `PackageReference` items to the plugin project for dependencies. Platform-specific plugins should explicitly target `net10.0-windows`.
 
-## Plugin Directory Structure
+## Plugin context
 
+CodeDeck creates one instance of each plugin class for every load. Override `InitializeAsync` for plugin-wide initialization; it receives an immutable `PluginContext` containing that plugin's directory, plugin-level configuration settings, and cancellation token.
 
-
-```powershell
-"Code Deck Root Directory"
-└───Plugins
-    └───MyCustomPlugin
-        │   # All C# source files making up the plugin
-        │   SourceFile1.cs
-        │   SourceFile2.cs
-        │   ...
-        │
-        ├───bin
-        │       # Compiled assemblies, no user files should be placed here
-        │       MyCustomPlugin.dll
-        │       MyCustomPlugin.pdb
-        │
-        └───lib
-                # Any external libraries goes in here
-                MyExternalLib1.dll
-                MyExternalLib2.dll
-                ...
+```csharp
+public override Task InitializeAsync(PluginContext context, CancellationToken cancellationToken)
+{
+    var cacheFile = Path.Combine(context.PluginPath, "cache.json");
+    return Task.CompletedTask;
+}
 ```
 
+Every tile receives the same context through `PluginContext` before its `Init` method runs. Its `Init` and key-press methods receive a token linked to both the tile and plugin lifetime. Key-specific settings remain bound to the tile's `[Setting]` properties. Reloading creates fresh plugin and tile instances with a new context.
 
-## Develop A *User* Plugin
-This is a plugin developed by a regular user.
+## Per-load shared state
 
-All you need to modify or create plugins is a text editor. A code editor with `C#` syntax highlighting is recommended.
+Use `PluginContext.GetOrCreateSharedState` for state that must be shared by all
+tiles in one plugin load, such as a single hardware connection or cache. The
+factory runs once per key and the state is disposed (`IAsyncDisposable` or
+`IDisposable`) after that load's managed tasks stop during plugin unload.
 
-
-### Debugging
-
-When developing a plugin it is suggested to run **Code Deck** through `CodeDeck.exe` in a terminal. This will give you access to the log output which shows errors and warnings.
-
-An example would look something like this:
-```log
-CodeDeck.PluginSystem.PluginLoader: Error: SourceFile([383..387)): The name '_ctn' does not exist in the current context
-CodeDeck.PluginSystem.PluginLoader: Warning: Plugin Plugins\Counter did not produce an assembly.
+```csharp
+var monitor = PluginContext.GetOrCreateSharedState(
+    "MyPlugin.DeviceMonitor",
+    () => new DeviceMonitor(PluginContext));
 ```
 
-### External Libraries
+Each tile should subscribe in `Init` and unsubscribe in `DeInit`; its display
+formatting remains tile-specific while the monitor owns the shared I/O.
 
-It is possible to use external libraries by adding them to a `lib` directory.
+## Managed plugin tasks
 
-*Example from `AudioDeviceSwitcher` plugin:*
-```powershell
-Plugins
-├───AudioDeviceSwitcher.cs
-│
-├───bin
-│       AudioDeviceSwitcher.dll
-│       AudioDeviceSwitcher.pdb
-│
-└───lib
-        AudioSwitcher.AudioApi.CoreAudio.dll
-        AudioSwitcher.AudioApi.dll
-        System.Drawing.Common.dll
-        System.Windows.Extensions.dll
+Use `RunEvery` from a `Tile` or `CodeDeckPlugin` for periodic work. CodeDeck runs the
+operation serially (it never overlaps a prior run), supplies a lifecycle cancellation
+token, records failures, and waits for managed tasks before unloading a plugin.
+
+```csharp
+public override Task Init(CancellationToken cancellationToken)
+{
+    RunEvery(
+        "Status update",
+        TimeSpan.FromMinutes(1),
+        async token => Text = await _client.GetStringAsync("https://example.test/status", token));
+    return Task.CompletedTask;
+}
 ```
 
-### Nuget
-Automatic Nuget support through `packages.json` or similar is planned, but not implemented. It's possible to download Nuget-packages and add them to the `lib` directory manually.
+The operation runs immediately by default; pass `runImmediately: false` to wait for
+the first interval. For a non-periodic long-running operation such as a HID reader,
+use `RunTask`. Both helpers can take an additional cancellation token for work that
+ends before the tile/plugin lifetime. Do not start untracked fire-and-forget loops.
 
-***⚠️ Make sure to add the correct (runtime/framework version) assembly from the Nuget and only one assembly with the same name. Code Deck currently uses `net10.0`.***
+The Windows tray menu's **Plugin Tasks...** window shows loaded plugins and managed
+task state, timing, and errors. Its artifact-size column is the total staged plugin
+directory size. It is not, and cannot be, an exact measurement of managed memory per
+AssemblyLoadContext.
 
-#### Example From The `PerformanceCounters` Plugin
+## Tile lifecycle
 
-Install `System.Diagnostics.PerformanceCounter` using `nuget.exe`:
+`Init` runs after a tile is created. `OnTilePressDown` and `OnTilePressUp` handle key actions. `DeInit` runs when configuration or a plugin reload replaces the tile. Long-running work must observe the supplied cancellation token and `DeInit` must await any work the tile started before it returns.
 
-```powershell
-> nuget install System.Diagnostics.PerformanceCounter
+Tile properties such as `Text`, `Image`, `BackgroundColor`, and `ShowIndicator` notify CodeDeck to redraw the key.
 
-Installing package 'System.Diagnostics.PerformanceCounter' to 'Plugins\PerformanceCounters'.
-  GET https://api.nuget.org/v3/registration5-gz-semver2/system.diagnostics.performancecounter/index.json
-  OK https://api.nuget.org/v3/registration5-gz-semver2/system.diagnostics.performancecounter/index.json 606ms
+## Build staging and MSBuild
 
+MSBuild project files can import shared `.props` and `.targets` files. A `.props` file supplies build settings; a `.targets` file defines build steps. `AfterTargets="Build"` makes a step run after the ordinary project build. `ItemGroup` creates a list of files or projects, and tasks such as `MSBuild` and `Copy` operate on that list.
 
-Attempting to gather dependency information for package 'System.Diagnostics.PerformanceCounter.7.0.0' with respect to project 'Plugins\PerformanceCounters', targeting 'Any,Version=v0.0'
-Gathering dependency information took 18 ms
-Attempting to resolve dependencies for package 'System.Diagnostics.PerformanceCounter.7.0.0' with DependencyBehavior 'Lowest'
-Resolving dependency information took 0 ms
-Resolving actions to install package 'System.Diagnostics.PerformanceCounter.7.0.0'
-Resolved actions to install package 'System.Diagnostics.PerformanceCounter.7.0.0'
-Retrieving package 'System.Diagnostics.PerformanceCounter 7.0.0' from 'nuget.org'.
-Adding package 'System.Diagnostics.PerformanceCounter.7.0.0' to folder 'Plugins\PerformanceCounters'
-Added package 'System.Diagnostics.PerformanceCounter.7.0.0' to folder 'Plugins\PerformanceCounters'
-Successfully installed 'System.Diagnostics.PerformanceCounter 7.0.0' to Plugins\PerformanceCounters
-Executing nuget actions took 236 ms
-```
+| File | Responsibility |
+| --- | --- |
+| `Directory.Build.props` | Automatically applies common plugin settings to every project below `Plugins/`: .NET target framework, nullable/implicit-using options, a reference to `CodeDeck.PluginAbstractions`, and copying NuGet runtime dependencies beside the plugin DLL. |
+| `Directory.Build.targets` | Automatically runs after an individual plugin build. It stages that plugin's output in the Windows host output directory. `DesignTimeBuild` prevents IntelliSense and other VS design-time builds from copying files. |
+| `BuiltInPlugins.targets` | Imported by `CodeDeck.csproj`. After CodeDeck builds, it builds every built-in plugin and passes CodeDeck's `Plugins` output directory as the staging destination. |
+| `HostPluginArtifacts.targets` | Imported by the Windows and Linux host projects. After a host builds, it copies the staged plugin artifacts from the CodeDeck output directory into that host's output directory. |
 
-Now lets have a look inside the Nuget and figure out which assembly to use.
+Visual Studio build behavior follows from those imports:
 
-```powershell
-> cd System.Diagnostics.PerformanceCounter.7.0.0
-
-> tree /F
-
-├───lib
-│   ├───net462
-│   │       System.Diagnostics.PerformanceCounter.dll
-│   │       System.Diagnostics.PerformanceCounter.xml
-│   │
-│   ├───net6.0
-│   │       System.Diagnostics.PerformanceCounter.dll
-│   │       System.Diagnostics.PerformanceCounter.xml
-│   │
-│   ├───net7.0
-│   │       System.Diagnostics.PerformanceCounter.dll
-│   │       System.Diagnostics.PerformanceCounter.xml
-│   │
-│   └───netstandard2.0
-│           System.Diagnostics.PerformanceCounter.dll
-│           System.Diagnostics.PerformanceCounter.xml
-│
-└───runtimes
-    └───win
-        └───lib
-            ├───net6.0
-            │       System.Diagnostics.PerformanceCounter.dll
-            │       System.Diagnostics.PerformanceCounter.xml
-            │
-            └───net7.0
-                    System.Diagnostics.PerformanceCounter.dll
-                    System.Diagnostics.PerformanceCounter.xml
-
-
-```
-If `lib` contains an assembly for `net10.0`, this is usually the assembly you want. If that is unavailable, use the closest supported target framework compatible with the package and runtime.
-
-However, for `System.Diagnostics.PerformanceCounter.dll`, the assembly in `lib` will give you an error similar to: "Performance Counters are not supported on this platform." at runtime and that's because `System.Diagnostics.PerformanceCounter.dll` is platform specific.
-
-In the above case we have to use the `System.Diagnostics.PerformanceCounter.dll` assembly from `System.Diagnostics.PerformanceCounter.7.0.0\runtimes\win\lib\net7.0`.
-
-Copy the correct assembly to the plugins `lib` directory:
-
-```powershell
-\publish\Plugins>tree /F
-
-└───PerformanceCounters
-    │   PerformanceCounters.cs
-    │
-    └───lib
-            System.Diagnostics.PerformanceCounter.dll
-
-```
-
-**Code Deck** should now be able to compile the plugin against the added assembly and reference the added assembly at runtime.
-
-
-## Develop A *Builtin* Plugin
-This is inteded for advanced users and mainly for plugins that are general enough that it makes sense to include them into **Code Deck** itself.
-
-If you want to have your plugin included as a part of the **Code Deck** application, I would suggest cloning the whole **Code Deck** repo from GitHub and creating a new plugin directory in the `CodeDeck.Plugins`-project using Visual Studio or Visual Studio Code.
-
-
-### `CodeDeck.Plugins`-project
-The `CodeDeck.Plugins`-project is just a container project for the plugins. Each plugin should have their own directory and the source files should be set to `Build Action: Content` and `Copy to output directory: Copy if newer`.
-
-The `CodeDeck.Plugins`-project should ***NOT*** reference any external packages.
-
-
-### Documentation
-Add a `README.md` file in the same directory as the rest of the plugin. Use the `README.md` from one of the other plugins as a template.
+1. **Build Solution** builds CodeDeck, stages every plugin with it, then builds the selected host and copies those artifacts to the host output.
+2. **Build one plugin** builds and stages only that plugin directly into the Windows host output. This is the fast development path for rebuilding a plugin while CodeDeck is running.

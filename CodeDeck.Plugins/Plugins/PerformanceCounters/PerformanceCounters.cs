@@ -14,23 +14,15 @@ public class PerformanceCounters : CodeDeckPlugin
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(() => UpdateTile(cancellationToken), cancellationToken);
+            RunEvery("CPU usage update", TimeSpan.FromSeconds(1), UpdateTile);
             await Task.CompletedTask;
         }
 
-        private async Task UpdateTile(CancellationToken cancellationToken)
+        private Task UpdateTile(CancellationToken cancellationToken)
         {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                var cpuUsage = (int)_cpuUsageCounter.NextValue();
-                Text = string.Format(Format ?? "CPU\n{0} %", cpuUsage);
-                await Task.Delay(1000, cancellationToken);
-            }
+            var cpuUsage = (int)_cpuUsageCounter.NextValue();
+            Text = string.Format(Format ?? "CPU\n{0} %", cpuUsage);
+            return Task.CompletedTask;
         }
     }
 
@@ -42,23 +34,15 @@ public class PerformanceCounters : CodeDeckPlugin
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(() => UpdateTile(cancellationToken), cancellationToken);
+            RunEvery("Memory usage update", TimeSpan.FromSeconds(1), UpdateTile);
             await Task.CompletedTask;
         }
 
-        private async Task UpdateTile(CancellationToken cancellationToken)
+        private Task UpdateTile(CancellationToken cancellationToken)
         {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                var memUsage = (int)_memUsageCounter.NextValue();
-                Text = string.Format(Format ?? "RAM\n{0} %", memUsage);
-                await Task.Delay(1000, cancellationToken);
-            }
+            var memUsage = (int)_memUsageCounter.NextValue();
+            Text = string.Format(Format ?? "RAM\n{0} %", memUsage);
+            return Task.CompletedTask;
         }
     }
 
@@ -82,24 +66,15 @@ public class PerformanceCounters : CodeDeckPlugin
                                   where counter.CounterName == "Utilization Percentage"
                                   select counter);
 
-            _ = Task.Run(() => UpdateTile(cancellationToken), cancellationToken);
+            RunEvery("GPU usage update", TimeSpan.FromSeconds(1), UpdateTile);
             await Task.CompletedTask;
         }
 
-        private async Task UpdateTile(CancellationToken cancellationToken)
+        private Task UpdateTile(CancellationToken cancellationToken)
         {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                var usage = (int)_gpuCounters.Sum(x => x.NextValue());
-                Text = string.Format(Format ?? "GPU\n{0} %", usage);
-
-                await Task.Delay(1000, cancellationToken);
-            }
+            var usage = (int)_gpuCounters.Sum(x => x.NextValue());
+            Text = string.Format(Format ?? "GPU\n{0} %", usage);
+            return Task.CompletedTask;
         }
     }
 }

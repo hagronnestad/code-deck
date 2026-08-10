@@ -16,7 +16,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
 
             public override async Task Init(CancellationToken cancellationToken)
             {
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+                RunEvery("Plain text update", TimeSpan.FromMilliseconds(Interval ?? 60000), GetAsync);
 
                 await Task.CompletedTask;
             }
@@ -40,20 +40,6 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                 }
             }
 
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        Debug.WriteLine($"{nameof(BackgroundTask)} in {nameof(PlainTextTile)} with {Url} was cancelled!");
-                        return;
-                    }
-
-                    GetAsync(cancellationToken).Wait(cancellationToken);
-                    await Task.Delay(Interval ?? 60000, cancellationToken);
-                }
-            }
         }
 
         public class ImageTile : Tile
@@ -65,7 +51,7 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
 
             public override async Task Init(CancellationToken cancellationToken)
             {
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+                RunEvery("Image update", TimeSpan.FromMilliseconds(Interval), GetAsync);
 
                 await Task.CompletedTask;
             }
@@ -116,19 +102,6 @@ namespace CodeDeck.Plugins.Plugins.WebRequest
                 }
             }
 
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    GetAsync(cancellationToken).Wait(cancellationToken);
-                    await Task.Delay(Interval, cancellationToken);
-                }
-            }
         }
     }
 }

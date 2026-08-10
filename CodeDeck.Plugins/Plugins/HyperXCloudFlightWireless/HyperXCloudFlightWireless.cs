@@ -1,5 +1,4 @@
 ﻿using HidSharp;
-using System.Diagnostics;
 
 /// <summary>
 /// Inspired by: https://github.com/franco-giordano/cloud-flight-monitor
@@ -27,7 +26,11 @@ public class HyperXCloudFlightWireless : CodeDeckPlugin
                 .Where(x => x.GetMaxInputReportLength() == 20)
                 .FirstOrDefault();
 
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunEvery(
+                "Battery poll",
+                TimeSpan.FromMilliseconds(Interval ?? 10 * 60 * 1000),
+                GetAsync,
+                cancellationToken: cancellationToken);
 
             await Task.CompletedTask;
         }
@@ -87,21 +90,6 @@ public class HyperXCloudFlightWireless : CodeDeckPlugin
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    Debug.WriteLine($"{nameof(BackgroundTask)} in {nameof(BatteryTile)} was cancelled!");
-                    return;
-                }
-
-                GetAsync(cancellationToken).Wait(cancellationToken);
-                await Task.Delay(Interval ?? 10 * 60 * 1000, cancellationToken);
             }
         }
     }

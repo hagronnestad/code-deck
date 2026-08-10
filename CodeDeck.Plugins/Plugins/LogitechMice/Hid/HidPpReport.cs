@@ -8,8 +8,8 @@ public class HidPpReport
     public byte FuncIndexAndSoftwareId;
     public byte[] Params = new byte[20 - 4];
 
-    public byte FuncIndex => (byte) (FuncIndexAndSoftwareId >> 4);
-    public byte SoftwareId => (byte) (FuncIndexAndSoftwareId & 0x0F);
+    public byte FuncIndex => (byte)(FuncIndexAndSoftwareId >> 4);
+    public byte SoftwareId => (byte)(FuncIndexAndSoftwareId & 0x0F);
 
     public static HidPpReport? FromBytes(byte[] bytes)
     {
