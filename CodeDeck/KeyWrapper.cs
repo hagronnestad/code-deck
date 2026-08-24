@@ -16,6 +16,7 @@ namespace CodeDeck
 
         public Plugin? Plugin { get; set; }
         public Tile? Tile { get; set; }
+        public Task InitializationTask { get; private set; } = Task.CompletedTask;
         public CancellationTokenSource CancellationTokenSource { get; } = new();
         private readonly CancellationTokenSource? _pluginLinkedCancellationTokenSource;
         private CancellationToken CancellationToken =>
@@ -93,6 +94,13 @@ namespace CodeDeck
             {
                 _logger.LogError($"Exception during 'Tile.Init' in plugin: {Plugin.Name}; tile: {Tile?.GetType().Name ?? "null"}. Message: '{e.Message}'");
             }
+        }
+
+        public void StartInitialization()
+        {
+            if (Plugin is null || Key.Tile is null) return;
+
+            InitializationTask = Task.Run(InstantiateTileObjectAsync);
         }
 
         public void NotifyChange_Action()

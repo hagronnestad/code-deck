@@ -421,17 +421,11 @@ namespace CodeDeck
                     keyWrapper.Image = await Task.Run(() => SafeLoadImage(keyWrapper.Key.Image!, true));
                 }));
 
-            // Initialize tiles concurrently, including synchronous work before their first await.
-            await Task.WhenAll(keyWrappers
-                .Where(x => x.Plugin != null)
-                .Select(keyWrapper => Task.Run(keyWrapper.InstantiateTileObjectAsync)));
-
-            // Bind all event handlers last to prevent unnecessary
-            // key updates during init and draw all keys at the same time
+            // Publish wrappers before initialization so each tile can finish in its own
+            // time and redraw only its own key without delaying the rest of the deck.
             keyWrappers.ForEach(x => x.Updated += KeyWrapper_Updated);
-
-            // Keep wrappers for later
             AddKeyWrappers(keyWrappers);
+            keyWrappers.ForEach(keyWrapper => keyWrapper.StartInitialization());
         }
 
         /// <summary>
@@ -476,6 +470,9 @@ namespace CodeDeck
                 keyWrapper.Updated -= KeyWrapper_Updated;
                 keyWrapper.Cancel();
             });
+
+            await Task.WhenAll(keyWrappers
+                .Select(keyWrapper => keyWrapper.InitializationTask));
 
             await Task.WhenAll(keyWrappers
                 .Select(keyWrapper => keyWrapper.DeinitializeAsync()));
