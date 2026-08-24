@@ -14,85 +14,91 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
         private static NissanConnectClient _client = new();
         private static string? _userId = null;
+        private static TaskCompletionSource _initializationCompleted = CreateInitializationCompletionSource();
 
 
         public override Task InitializeAsync(PluginContext context, CancellationToken cancellationToken)
         {
             _tokenCacheFile = Path.Combine(context.PluginPath, "token.cache");
+            _userId = null;
+            _initializationCompleted = CreateInitializationCompletionSource();
             RunTask("Nissan Connect initialization", token => InitAsync(Email, Password, Logger, token));
             return Task.CompletedTask;
         }
 
         private static async Task InitAsync(string? email, string? password, ILogger logger, CancellationToken cancellationToken)
         {
-            // Instantiate client
-            _client = new NissanConnectClient(NissanConnectLib.Configuration.Region.EU);
-
-            // Save token to cache file when refreshed
-            _client.AccessTokenRefreshed += (sender, token) =>
+            try
             {
-                logger.LogDebug("Access token refreshed.");
-                File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
-            };
+                // Instantiate client
+                _client = new NissanConnectClient(NissanConnectLib.Configuration.Region.EU);
 
-            var loggedIn = false;
-
-            // Try to use token cache file
-            if (File.Exists(_tokenCacheFile))
-            {
-                var cachedToken = JsonSerializer.Deserialize<OAuthAccessTokenResult>(File.ReadAllText(_tokenCacheFile));
-                _client.AccessToken = cachedToken;
-
-                if (await _client.GetUserId() is null)
+                // Save token to cache file when refreshed
+                _client.AccessTokenRefreshed += (sender, token) =>
                 {
-                    logger.LogWarning("Cached authentication is invalid; deleting token cache.");
-                    File.Delete(_tokenCacheFile);
-                }
-                else
-                {
-                    logger.LogDebug("Cached authentication is valid.");
-                    loggedIn = true;
-                }
-            }
+                    logger.LogDebug("Access token refreshed.");
+                    File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
+                };
 
-            // Log in using username and password
-            if (!loggedIn)
-            {
-                // Log in using a username and password
-                if (email is not null && password is not null)
+                var loggedIn = false;
+
+                // Try to use token cache file
+                if (File.Exists(_tokenCacheFile))
                 {
-                    loggedIn = await _client.LogIn(email, password);
-                    if (loggedIn)
+                    var cachedToken = JsonSerializer.Deserialize<OAuthAccessTokenResult>(File.ReadAllText(_tokenCacheFile));
+                    _client.AccessToken = cachedToken;
+
+                    if (await _client.GetUserId() is null)
                     {
-                        logger.LogInformation("Logged in; writing token cache.");
-                        File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
+                        logger.LogWarning("Cached authentication is invalid; deleting token cache.");
+                        File.Delete(_tokenCacheFile);
                     }
                     else
                     {
-                        logger.LogError("Nissan Connect login failed.");
-                        return;
+                        logger.LogDebug("Cached authentication is valid.");
+                        loggedIn = true;
                     }
                 }
-            }
 
-            // Get the user id
-            _userId = await _client.GetUserId();
-            if (_userId == null)
-            {
-                logger.LogError("Nissan Connect returned no user ID.");
-                return;
+                // Log in using username and password
+                if (!loggedIn)
+                {
+                    // Log in using a username and password
+                    if (email is not null && password is not null)
+                    {
+                        loggedIn = await _client.LogIn(email, password);
+                        if (loggedIn)
+                        {
+                            logger.LogInformation("Logged in; writing token cache.");
+                            File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
+                        }
+                        else
+                        {
+                            logger.LogError("Nissan Connect login failed.");
+                            return;
+                        }
+                    }
+                }
+
+                // Get the user id
+                _userId = await _client.GetUserId();
+                if (_userId == null)
+                {
+                    logger.LogError("Nissan Connect returned no user ID.");
+                    return;
+                }
+                logger.LogInformation("Nissan Connect initialization completed.");
             }
-            logger.LogInformation("Nissan Connect initialization completed.");
+            finally
+            {
+                _initializationCompleted.TrySetResult();
+            }
         }
 
         private static async Task<Car?> GetCar(string? nickName, CancellationToken cancellationToken)
         {
-            // TODO: Fix this hack to prevent first tile Update calls to fail
-            // Wait until logged in
-            while (_userId is null)
-            {
-                await Task.Delay(1000, cancellationToken);
-            }
+            await _initializationCompleted.Task.WaitAsync(cancellationToken);
+            if (_userId is null) return null;
 
             var cars = await _client.GetCars(_userId);
 
@@ -102,6 +108,9 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
             return car;
         }
+
+        private static TaskCompletionSource CreateInitializationCompletionSource() =>
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public class NissanConnectBatteryLevelTile : Tile
         {
