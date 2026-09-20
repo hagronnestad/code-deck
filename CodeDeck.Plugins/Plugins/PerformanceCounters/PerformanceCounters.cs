@@ -100,8 +100,15 @@ public class PerformanceCounters : CodeDeckPlugin
                     return;
                 }
 
-                var usage = (int)_gpuCounters.Sum(x => x.NextValue());
-                Text = string.Format(Format ?? "GPU\n{0} %", usage);
+                try
+                {
+                    var usage = (int)_gpuCounters.Sum(x => x.NextValue());
+                    Text = string.Format(Format ?? "GPU\n{0} %", usage);
+                }
+                catch
+                {
+                    // Ignore exceptions to keep the update loop running
+                }
 
                 await Task.Delay(1000, cancellationToken);
             }
