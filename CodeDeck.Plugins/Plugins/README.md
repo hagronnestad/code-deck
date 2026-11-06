@@ -67,6 +67,27 @@ public override Task InitializeAsync(PluginContext context, CancellationToken ca
 
 Every tile receives the same context through `PluginContext` before its `Init` method runs. Its `Init` and key-press methods receive a token linked to both the tile and plugin lifetime. Key-specific settings remain bound to the tile's `[Setting]` properties. Reloading creates fresh plugin and tile instances with a new context.
 
+## Logging
+
+Every plugin and tile receives a protected `ILogger Logger` before its initialization
+method runs. Loggers use the concrete class name as their category and the host's
+logging providers. Use structured messages and pass exception objects rather than
+writing to `Console`, `Debug`, or `Trace`.
+
+```csharp
+Logger.LogInformation("Connected to {DeviceName}.", deviceName);
+Logger.LogError(exception, "Device update failed.");
+```
+
+Shared helpers can receive an `ILogger` or obtain one using
+`context.CreateLogger("MyPlugin.DeviceMonitor")`. The host owns the logger factory;
+plugins must not dispose it. Logging abstractions are shared with the host across
+collectible plugin load contexts.
+
+Let recurring update failures propagate so the task manager can record them and
+retry at the next interval. Do not log expected lifecycle cancellation as an error,
+and do not log credentials, authentication tokens, or sensitive URL query strings.
+
 ## Per-load shared state
 
 Use `PluginContext.GetOrCreateSharedState` for state that must be shared by all
@@ -116,6 +137,28 @@ AssemblyLoadContext.
 
 Tile properties such as `Text`, `Image`, `BackgroundColor`, and `ShowIndicator` notify CodeDeck to redraw the key.
 
+For dynamically loaded images owned by a tile, use `SetOwnedImage(image)`. It
+transfers ownership to the tile, disposes its previous owned image under the same
+`RenderLock` used by the host, and releases the final image after `DeInit`. The
+ordinary `Image` property does not take ownership, so shared images remain supported.
+Dispose images created during failed processing before transferring ownership.
+
+Periodic work is serial within one managed task, but key presses can occur during
+an update. Serialize those paths when they share resources, and make `DeInit` wait
+for active work to finish after the host cancels the tile's token.
+
+## Publishing and deployment
+
+```sh
+dotnet publish CodeDeck.Windows/CodeDeck.Windows.csproj -c Release -r win-x64 --self-contained false
+dotnet publish CodeDeck.Linux/CodeDeck.Linux.csproj -c Release -r linux-x64 --self-contained false
+```
+
+Deploy the complete publish directory, including `Plugins`, fonts, and images.
+Each plugin directory must contain its `.dll`, `.deps.json`, runtime dependencies,
+and assets (for example, `Weather/Icons`). Do not publish just the executable or
+copy only plugin DLLs.
+
 ## Build staging and MSBuild
 
 MSBuild project files can import shared `.props` and `.targets` files. A `.props` file supplies build settings; a `.targets` file defines build steps. `AfterTargets="Build"` makes a step run after the ordinary project build. `ItemGroup` creates a list of files or projects, and tasks such as `MSBuild` and `Copy` operate on that list.
@@ -124,8 +167,8 @@ MSBuild project files can import shared `.props` and `.targets` files. A `.props
 | --- | --- |
 | `Directory.Build.props` | Automatically applies common plugin settings to every project below `Plugins/`: .NET target framework, nullable/implicit-using options, a reference to `CodeDeck.PluginAbstractions`, and copying NuGet runtime dependencies beside the plugin DLL. |
 | `Directory.Build.targets` | Automatically runs after an individual plugin build. It stages that plugin's output in the Windows host output directory. `DesignTimeBuild` prevents IntelliSense and other VS design-time builds from copying files. |
-| `BuiltInPlugins.targets` | Imported by `CodeDeck.csproj`. After CodeDeck builds, it builds every built-in plugin and passes CodeDeck's `Plugins` output directory as the staging destination. |
-| `HostPluginArtifacts.targets` | Imported by the Windows and Linux host projects. After a host builds, it copies the staged plugin artifacts from the CodeDeck output directory into that host's output directory. |
+| `BuiltInPlugins.targets` | Imported by `CodeDeck.csproj`. After CodeDeck builds, it restores and builds every built-in plugin with the current runtime settings, staging their output in CodeDeck's `Plugins` directory. |
+| `HostPluginArtifacts.targets` | Imported by the Windows and Linux host projects. After a host builds, it copies staged plugin artifacts into the host output; after publishing, it copies that complete plugin tree into the publish directory. |
 
 Visual Studio build behavior follows from those imports:
 

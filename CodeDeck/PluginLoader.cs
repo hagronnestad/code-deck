@@ -7,6 +7,7 @@ namespace CodeDeck
     public class PluginLoader
     {
         private readonly ILogger<PluginLoader> _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ConfigurationProvider _configurationProvider;
         private readonly IPluginTaskManager _taskManager;
         private readonly FileSystemWatcher? _pluginFileSystemWatcher;
@@ -32,10 +33,12 @@ namespace CodeDeck
 
         public PluginLoader(
             ILogger<PluginLoader> logger,
+            ILoggerFactory loggerFactory,
             ConfigurationProvider configurationProvider,
             IPluginTaskManager taskManager)
         {
             _logger = logger;
+            _loggerFactory = loggerFactory;
             _configurationProvider = configurationProvider;
             _taskManager = taskManager;
             _pluginReloadTimer = new Timer(_ => RaisePluginsChanged());
@@ -104,6 +107,7 @@ namespace CodeDeck
                 _logger.LogInformation($"Reloading plugin '{pluginName}'.");
                 var replacementPlugin = await Plugin.LoadAsync(
                     _logger,
+                    _loggerFactory,
                     _taskManager,
                     pluginDirectory,
                     GetPluginConfiguration(pluginName),
@@ -156,6 +160,7 @@ namespace CodeDeck
             var plugins = await Task.WhenAll(pluginDirectories
                 .Select(path => Plugin.LoadAsync(
                     _logger,
+                    _loggerFactory,
                     _taskManager,
                     path,
                     GetPluginConfiguration(Path.GetFileName(path)),

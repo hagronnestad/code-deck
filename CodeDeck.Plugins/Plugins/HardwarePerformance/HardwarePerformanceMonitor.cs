@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace CodeDeck.Plugins.Plugins.HardwarePerformance;
 
 internal sealed class HardwarePerformanceMonitor : IDisposable
@@ -8,7 +6,8 @@ internal sealed class HardwarePerformanceMonitor : IDisposable
     private const string TaskOwner = "Hardware performance monitor";
 
     private readonly object _stateLock = new();
-    private readonly GpuUsageSampler _gpuUsageSampler = new();
+    private readonly ILogger _logger;
+    private readonly GpuUsageSampler _gpuUsageSampler;
     private SystemCpuTimes? _previousCpuTimes;
     private HardwarePerformanceSnapshot _snapshot;
     private Action<HardwarePerformanceSnapshot>? _changed;
@@ -16,6 +15,8 @@ internal sealed class HardwarePerformanceMonitor : IDisposable
 
     public HardwarePerformanceMonitor(PluginContext context)
     {
+        _logger = context.CreateLogger(typeof(HardwarePerformanceMonitor).FullName!);
+        _gpuUsageSampler = new GpuUsageSampler(context.CreateLogger(typeof(GpuUsageSampler).FullName!));
         if (WindowsPerformanceApi.TryGetSystemCpuTimes(out var cpuTimes))
         {
             _previousCpuTimes = cpuTimes;
@@ -102,7 +103,7 @@ internal sealed class HardwarePerformanceMonitor : IDisposable
                 }
                 catch (Exception exception)
                 {
-                    Debug.WriteLine($"{PluginName}: snapshot subscriber failed: {exception.Message}");
+                    _logger.LogError(exception, "Hardware performance snapshot subscriber failed.");
                 }
             }
         }
@@ -138,11 +139,11 @@ internal sealed class HardwarePerformanceMonitor : IDisposable
         return Math.Clamp((totalDelta - idleDelta) * 100d / totalDelta, 0d, 100d);
     }
 
-    private static SystemMemoryUsage ReadMemoryUsage()
+    private SystemMemoryUsage ReadMemoryUsage()
     {
         if (WindowsPerformanceApi.TryGetMemoryUsage(out var memory)) return memory;
 
-        Debug.WriteLine($"{PluginName}: GlobalMemoryStatusEx failed.");
+        _logger.LogWarning("GlobalMemoryStatusEx failed.");
         return default;
     }
 }

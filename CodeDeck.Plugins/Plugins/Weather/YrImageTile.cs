@@ -14,85 +14,97 @@ namespace CodeDeck.Plugins.Plugins.Weather
             [Setting] public double Lon { get; set; }
             [Setting] public string? Period { get; set; }
 
-
-            private static readonly HttpClient _client = new();
-            private const string API_BASE_URL = "https://api.met.no/weatherapi/locationforecast/2.0/";
+            private readonly SemaphoreSlim _updateLock = new(1, 1);
+            private bool _deinitialized;
             private string _apiUrl = "";
 
-            public override async Task Init(CancellationToken cancellationToken)
+            public override Task Init(CancellationToken cancellationToken)
             {
-                _client.DefaultRequestHeaders.Add("User-Agent", "Code Deck");
-
-                var nfi = new NumberFormatInfo
+                if (!double.IsFinite(Lat) || Lat is < -90 or > 90 ||
+                    !double.IsFinite(Lon) || Lon is < -180 or > 180)
                 {
-                    NumberDecimalSeparator = ".",
-                    NumberDecimalDigits = 4
-                };
+                    throw new InvalidOperationException("Weather coordinates must be valid latitude and longitude values.");
+                }
+                if (Period is not (null or "Next1Hours" or "Next6Hours" or "Next12Hours"))
+                {
+                    throw new InvalidOperationException("Weather Period must be Next1Hours, Next6Hours, or Next12Hours.");
+                }
 
-                _apiUrl = $"{API_BASE_URL}compact?lat={Lat.ToString(nfi)}&lon={Lon.ToString(nfi)}";
-
+                _apiUrl = $"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={Lat.ToString("0.####", CultureInfo.InvariantCulture)}&lon={Lon.ToString("0.####", CultureInfo.InvariantCulture)}";
                 RunEvery("Weather update", TimeSpan.FromMilliseconds(Interval), GetAsync);
-
-                await Task.CompletedTask;
+                return Task.CompletedTask;
             }
 
-            public override async Task OnTilePressUp(CancellationToken cancellationToken)
-            {
-                await GetAsync(cancellationToken);
-            }
+            public override Task OnTilePressUp(CancellationToken cancellationToken) => GetAsync(cancellationToken);
 
-            private async Task<LocationForecast?> GetAsync(CancellationToken cancellationToken)
+            public override async Task DeInit()
             {
+                await _updateLock.WaitAsync();
                 try
                 {
+                    _deinitialized = true;
+                }
+                finally
+                {
+                    _updateLock.Release();
+                }
+            }
+
+            private async Task GetAsync(CancellationToken cancellationToken)
+            {
+                await _updateLock.WaitAsync(cancellationToken);
+                try
+                {
+                    ObjectDisposedException.ThrowIf(_deinitialized, this);
                     ShowIndicator = true;
-                    var data = await _client.GetFromJsonAsync<LocationForecast>(_apiUrl, cancellationToken);
-
-                    var timeSeries = data?.Properties?.Timeseries;
-                    if (timeSeries is null || !timeSeries.Any()) return null;
-
-                    var timeSeriesData = timeSeries.First().Data;
-
-                    string? symbolCode = null;
-
-                    switch (Period)
+                    var client = PluginContext.GetOrCreateSharedState("Weather.HttpClient", () =>
                     {
-                        case null:
-                        case "Next1Hours":
-                            symbolCode = timeSeriesData?.Next1Hours?.Summary?.SymbolCode;
-                            break;
-                        case "Next6Hours":
-                            symbolCode = timeSeriesData?.Next6Hours?.Summary?.SymbolCode;
-                            break;
-                        case "Next12Hours":
-                            symbolCode = timeSeriesData?.Next12Hours?.Summary?.SymbolCode;
-                            break;
+                        var httpClient = new HttpClient();
+                        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
+                            "CodeDeck/1.0 (https://github.com/hagronnestad/code-deck)");
+                        return httpClient;
+                    });
+                    var data = await client.GetFromJsonAsync<LocationForecast>(_apiUrl, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                        default:
-                            break;
+                    var timeSeriesData = data?.Properties?.Timeseries?.FirstOrDefault()?.Data
+                        ?? throw new InvalidOperationException("Weather API returned no forecast.");
+                    var symbolCode = Period switch
+                    {
+                        null or "Next1Hours" => timeSeriesData.Next1Hours?.Summary?.SymbolCode,
+                        "Next6Hours" => timeSeriesData.Next6Hours?.Summary?.SymbolCode,
+                        "Next12Hours" => timeSeriesData.Next12Hours?.Summary?.SymbolCode,
+                        _ => throw new InvalidOperationException("Unknown weather period.")
+                    };
+                    if (string.IsNullOrWhiteSpace(symbolCode))
+                    {
+                        throw new InvalidOperationException($"Weather API returned no symbol for {Period ?? "Next1Hours"}.");
+                    }
+                    if (symbolCode.Any(character => !(char.IsAsciiLetterOrDigit(character) || character == '_')))
+                    {
+                        throw new InvalidOperationException("Weather API returned an invalid symbol code.");
                     }
 
-                    if (symbolCode is null) return null;
-
-                    var symbolFile = Path.GetFullPath($"Plugins/Weather/Icons/{symbolCode}.png");
-                    if (!File.Exists(symbolFile)) return null;
-
-                    Image = Image.Load(symbolFile);
-
-                    return data;
+                    var symbolFile = Path.Combine(PluginContext.PluginPath, "Icons", $"{symbolCode}.png");
+                    var image = Image.Load(symbolFile);
+                    SetOwnedImage(image);
+                    Logger.LogDebug("Weather image updated for {Period}.", Period ?? "Next1Hours");
                 }
-                catch (Exception e)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    Console.WriteLine(e.Message);
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogError(exception, "Weather image update failed for {Period}.", Period ?? "Next1Hours");
+                    throw;
                 }
                 finally
                 {
                     ShowIndicator = false;
+                    _updateLock.Release();
                 }
-
-                return null;
             }
-
         }
     }
 }

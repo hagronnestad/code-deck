@@ -1,6 +1,5 @@
 using CodeDeck.Plugins.Plugins.LogitechMice.Hid;
 using HidSharp;
-using System.Diagnostics;
 
 namespace CodeDeck.Plugins.Plugins.LogitechMice;
 
@@ -80,7 +79,7 @@ public partial class LogitechMice : CodeDeckPlugin
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine($"{nameof(RequestBatteryInformationFeatureIndex)}: Exception: '{e.Message}'");
+                    Logger.LogWarning(e, "G703 HID reader failed.");
                 }
             }
         }
@@ -131,7 +130,7 @@ public partial class LogitechMice : CodeDeckPlugin
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"{nameof(RequestBatteryInformationFeatureIndex)}: Exception: '{e.Message}'");
+                Logger.LogWarning(e, "G703 battery feature request failed.");
             }
             finally
             {
@@ -161,7 +160,7 @@ public partial class LogitechMice : CodeDeckPlugin
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"{nameof(GetBatteryInformation)}: Exception: '{e.Message}'");
+                Logger.LogWarning(e, "G703 battery update failed.");
                 Text = FormatDisconnected ?? "🖱\n❌";
             }
             finally

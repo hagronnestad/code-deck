@@ -1,6 +1,5 @@
 using CodeDeck.Plugins.Plugins.LogitechMice.Hid;
 using HidSharp;
-using System.Diagnostics;
 
 namespace CodeDeck.Plugins.Plugins.LogitechMice;
 
@@ -55,6 +54,7 @@ public partial class LogitechMice : CodeDeckPlugin
     {
         private const string TaskOwner = "G Pro X Superlight monitor";
         private readonly PluginContext _context;
+        private readonly ILogger _logger;
         private readonly byte _deviceIndex;
         private readonly SemaphoreSlim _refreshLock = new(1, 1);
         private readonly object _deviceLock = new();
@@ -71,6 +71,7 @@ public partial class LogitechMice : CodeDeckPlugin
         public GProXSuperlightBatteryMonitor(PluginContext context, byte deviceIndex, TimeSpan interval)
         {
             _context = context;
+            _logger = context.CreateLogger(typeof(GProXSuperlightBatteryMonitor).FullName!);
             _deviceIndex = deviceIndex;
 
             // POC: the first tile to create this load-scoped monitor selects its interval.
@@ -135,7 +136,7 @@ public partial class LogitechMice : CodeDeckPlugin
             }
             catch (Exception exception)
             {
-                Debug.WriteLine($"{nameof(GProXSuperlightBatteryMonitor)}: Refresh exception: '{exception.Message}'");
+                _logger.LogWarning(exception, "G Pro X Superlight battery refresh failed.");
                 UpdateSnapshot(snapshot => snapshot with { IsDisconnected = true });
             }
             finally
@@ -203,7 +204,7 @@ public partial class LogitechMice : CodeDeckPlugin
                 }
                 catch (Exception exception)
                 {
-                    Debug.WriteLine($"{nameof(GProXSuperlightBatteryMonitor)}: Reader exception: '{exception.Message}'");
+                    _logger.LogWarning(exception, "G Pro X Superlight HID reader failed.");
                     UpdateSnapshot(snapshot => snapshot with { IsDisconnected = true });
                     await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
@@ -290,7 +291,7 @@ public partial class LogitechMice : CodeDeckPlugin
                     }
                     catch (Exception exception)
                     {
-                        Debug.WriteLine($"{nameof(GProXSuperlightBatteryMonitor)}: Subscriber exception: '{exception.Message}'");
+                        _logger.LogError(exception, "G Pro X Superlight snapshot subscriber failed.");
                     }
                 }
             }

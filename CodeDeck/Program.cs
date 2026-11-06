@@ -10,6 +10,7 @@ namespace CodeDeck
         private static readonly CancellationTokenSource cts = new CancellationTokenSource();
         private static PluginLoader? _pluginLoader;
         private static IPluginTaskManager? _pluginTaskManager;
+        private static ILoggerFactory? _loggerFactory;
 
         public static async Task Main(string[] args)
         {
@@ -36,12 +37,10 @@ namespace CodeDeck
 
                     logging.SetMinimumLevel(LogLevel.Debug);
                     logging.AddConsole();
-                    logging.AddDebug();
-
-                    //logging.AddEventLog();
                 })
                 .Build();
 
+            _loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
             _pluginLoader = host.Services.GetRequiredService<PluginLoader>();
             _pluginTaskManager = host.Services.GetRequiredService<IPluginTaskManager>();
             await host.RunAsync(cts.Token);
@@ -51,6 +50,10 @@ namespace CodeDeck
         {
             cts.Cancel();
         }
+
+        public static ILogger CreateLogger(string categoryName) =>
+            (_loggerFactory ?? throw new InvalidOperationException("The host has not been initialized."))
+                .CreateLogger(categoryName);
 
         public static PluginRuntimeSnapshot GetPluginRuntimeSnapshot() => new(
             _pluginLoader?.GetPluginStatuses() ?? Array.Empty<PluginStatusSnapshot>(),

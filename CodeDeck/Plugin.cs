@@ -1,6 +1,7 @@
 using CodeDeck.Models.Configuration;
 using CodeDeck.PluginAbstractions;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -17,6 +18,7 @@ namespace CodeDeck
         private static readonly HashSet<string> SharedAssemblyNames = new(StringComparer.OrdinalIgnoreCase)
         {
             typeof(CodeDeckPlugin).Assembly.GetName().Name!,
+            typeof(ILogger).Assembly.GetName().Name!,
             typeof(Image).Assembly.GetName().Name!,
             "HidSharp"
         };
@@ -45,6 +47,7 @@ namespace CodeDeck
 
         private Plugin(
             ILogger logger,
+            ILoggerFactory loggerFactory,
             IPluginTaskManager taskManager,
             string pluginDirectory,
             PluginConfiguration? configuration,
@@ -64,12 +67,14 @@ namespace CodeDeck
                 pluginDirectory,
                 configuration?.Settings,
                 _cancellationTokenSource.Token,
+                loggerFactory,
                 Guid.NewGuid().ToString("N"),
                 taskManager);
         }
 
         public static Task<Plugin> LoadAsync(
             ILogger logger,
+            ILoggerFactory loggerFactory,
             IPluginTaskManager taskManager,
             string pluginDirectory,
             PluginConfiguration? configuration,
@@ -79,6 +84,7 @@ namespace CodeDeck
             {
                 var plugin = new Plugin(
                     logger,
+                    loggerFactory,
                     taskManager,
                     pluginDirectory,
                     configuration,
@@ -131,7 +137,7 @@ namespace CodeDeck
                 PluginInstance = null;
                 PluginType = null;
                 TryDeleteCacheDirectory();
-                _logger.LogError($"<{nameof(Plugin)}.{nameof(LoadPluginAsync)}> Could not load plugin '{Name}'. Exception: {e.Message}");
+                _logger.LogError(e, "Could not load plugin {Plugin}.", Name);
             }
         }
 
@@ -302,7 +308,11 @@ namespace CodeDeck
                 }
                 else if (property.PropertyType == typeof(double?) || property.PropertyType == typeof(double))
                 {
-                    if (double.TryParse(value, out var parsedValue)) property.SetValue(instance, parsedValue);
+                    if (!double.TryParse(value.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedValue))
+                    {
+                        throw new FormatException($"Invalid numeric setting '{property.Name}' for '{type.Name}'.");
+                    }
+                    property.SetValue(instance, parsedValue);
                 }
                 else
                 {

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 
 namespace CodeDeck.PluginAbstractions
@@ -7,6 +8,7 @@ namespace CodeDeck.PluginAbstractions
         private readonly object _sharedStateLock = new();
         private readonly Dictionary<string, object> _sharedState = new(StringComparer.Ordinal);
         private bool _sharedStateDisposed;
+        private readonly ILoggerFactory _loggerFactory;
 
         public string PluginPath { get; }
         public IReadOnlyDictionary<string, string> Settings { get; }
@@ -18,9 +20,12 @@ namespace CodeDeck.PluginAbstractions
             string pluginPath,
             IReadOnlyDictionary<string, string>? settings,
             CancellationToken cancellationToken,
+            ILoggerFactory loggerFactory,
             string? taskScopeId = null,
             IPluginTaskManager? taskManager = null)
         {
+            ArgumentNullException.ThrowIfNull(loggerFactory);
+            _loggerFactory = loggerFactory;
             PluginPath = pluginPath;
             Settings = new ReadOnlyDictionary<string, string>(
                 settings is null
@@ -30,6 +35,8 @@ namespace CodeDeck.PluginAbstractions
             TaskScopeId = taskScopeId ?? Guid.NewGuid().ToString("N");
             TaskManager = taskManager ?? NoopPluginTaskManager.Instance;
         }
+
+        public ILogger CreateLogger(string categoryName) => _loggerFactory.CreateLogger(categoryName);
 
         public void RunEvery(
             string pluginName,

@@ -1,6 +1,17 @@
 # WebRequest
 The WebRequest plugin contains a collection of tiles that can request and display data from the Internet.
 
+Updates run immediately and then at the configured interval. Pressing a tile
+requests another update; manual and periodic updates for that tile do not overlap.
+Failures are logged through `ILogger` with exception details and appear in
+**Plugin Tasks...** for recurring updates. The last successful text/image remains
+visible, and the next periodic update retries. Expected cancellation during
+reload or shutdown is not logged as an update failure.
+
+Tiles share one HTTP client per plugin load. It is disposed when the plugin is
+unloaded. Image buffers owned by a tile are released when replaced or deinitialized.
+URLs must be absolute HTTP/HTTPS URLs, and update intervals must be positive.
+
 
 - [WebRequest](#webrequest)
   - [PlainTextTile](#plaintexttile)
@@ -89,6 +100,7 @@ A use case could be to display an image from a webcam.
 | -------- | ---------- | ------------------------------- |
 | Url      | `null`     | The URL to request.             |
 | Interval | `60000` ms | Update interval.                |
+| Size     | `72`       | Positive output image size in pixels; the result is square. |
 | Crop     | `false`    | Crop the image to fill the key. |
 
 

@@ -1,6 +1,5 @@
 using InputSimulatorEx.Native;
 using InputSimulatorEx;
-using System.Diagnostics;
 
 namespace CodeDeck.Plugins.Plugins.Counter;
 
@@ -50,7 +49,8 @@ public class KeyboardSimulator : CodeDeckPlugin
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"Exception in {nameof(HotkeyTile)}. Message: {e.Message}");
+                Logger.LogError(e, "Could not initialize hotkey settings.");
+                throw;
             }
 
             return base.Init(cancellationToken);

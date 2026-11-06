@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace CodeDeck.Plugins.Plugins.HardwarePerformance;
@@ -85,9 +84,11 @@ internal sealed class GpuUsageSampler : IDisposable
     private IntPtr _counter;
     private bool _hasBaseline;
     private uint? _lastFailure;
+    private readonly ILogger _logger;
 
-    public GpuUsageSampler()
+    public GpuUsageSampler(ILogger logger)
     {
+        _logger = logger;
         TryInitialize();
     }
 
@@ -219,7 +220,7 @@ internal sealed class GpuUsageSampler : IDisposable
     {
         if (_lastFailure != status)
         {
-            Debug.WriteLine($"HardwarePerformance: GPU performance query failed with PDH status 0x{status:X8}.");
+            _logger.LogWarning("GPU performance query failed with PDH status {Status:X8}.", status);
             _lastFailure = status;
         }
 

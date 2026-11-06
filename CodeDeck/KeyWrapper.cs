@@ -21,6 +21,9 @@ namespace CodeDeck
         private readonly CancellationTokenSource? _pluginLinkedCancellationTokenSource;
         private CancellationToken CancellationToken =>
             _pluginLinkedCancellationTokenSource?.Token ?? CancellationTokenSource.Token;
+        private bool IsCancellationRequested =>
+            CancellationTokenSource.IsCancellationRequested ||
+            (_pluginLinkedCancellationTokenSource?.IsCancellationRequested ?? false);
 
         public Image? Image { get; set; }
 
@@ -88,11 +91,14 @@ namespace CodeDeck
 
                 Tile.NotifyChange = NotifyChange_Action;
 
-                await Tile.InitializeAsync(Plugin.Context, CancellationToken);
+                await Tile.InitializeAsync(Plugin.Context, CancellationToken, RenderLock);
+            }
+            catch (OperationCanceledException) when (IsCancellationRequested)
+            {
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception during 'Tile.Init' in plugin: {Plugin.Name}; tile: {Tile?.GetType().Name ?? "null"}. Message: '{e.Message}'");
+                _logger.LogError(e, "Could not initialize {Plugin}/{Tile}.", Plugin.Name, Tile?.GetType().Name);
             }
         }
 
@@ -117,9 +123,12 @@ namespace CodeDeck
             {
                 await Tile.OnTilePressDown(CancellationToken);
             }
+            catch (OperationCanceledException) when (IsCancellationRequested)
+            {
+            }
             catch (Exception e)
             {
-                _logger.LogDebug($"<{nameof(Tile.OnTilePressDown)}>: {e.Message}");
+                _logger.LogError(e, "Key press down failed for {Plugin}/{Tile}.", Plugin?.Name, Tile.GetType().Name);
             }
         }
 
@@ -132,9 +141,12 @@ namespace CodeDeck
             {
                 await Tile.OnTilePressUp(CancellationToken);
             }
+            catch (OperationCanceledException) when (IsCancellationRequested)
+            {
+            }
             catch (Exception e)
             {
-                _logger.LogDebug($"<{nameof(Tile.OnTilePressUp)}>: {e.Message}");
+                _logger.LogError(e, "Key press up failed for {Plugin}/{Tile}.", Plugin?.Name, Tile.GetType().Name);
             }
         }
 
@@ -149,11 +161,11 @@ namespace CodeDeck
 
             try
             {
-                await Tile.DeInit();
+                await Tile.DeinitializeAsync();
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception during 'Tile.DeInit' in plugin: {Plugin?.Name ?? "none"}; tile: {Tile.GetType().Name}. Message: '{e.Message}'");
+                _logger.LogError(e, "Could not deinitialize {Plugin}/{Tile}.", Plugin?.Name, Tile.GetType().Name);
             }
         }
 

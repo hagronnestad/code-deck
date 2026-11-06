@@ -7,7 +7,7 @@
 
 **Code Deck** is a cross platform and open source alternative to the official Stream Deck application.
 
-The `Code`-part of the name is a reference to how configuration and plugins work in **Code Deck**. The configuration is done using `JSON` and all plugins are `C#`-scripts.
+The `Code`-part of the name is a reference to how configuration and plugins work in **Code Deck**. Configuration uses `JSON`, and plugins are compiled `C#` projects.
 
 ![Alt text](Screenshots/00-streamdeck.png)
 *Picture of **Code Deck** running my configuration on my Stream Deck.*
@@ -93,7 +93,7 @@ The `Code`-part of the name is a reference to how configuration and plugins work
 ### Plugin
 - A plugin can contain one or more tiles.
 - Plugins are written in `C#`.
-- Plugins are compiled on the fly when **Code Deck** starts.
+- Plugins are built as .NET assemblies and loaded when used by the configuration.
 - All plugins can be modified by the user.
 
 
@@ -101,6 +101,25 @@ The `Code`-part of the name is a reference to how configuration and plugins work
 **Code Deck** *DOES NOT* have a graphical user interface for configuration.
 
 Windows users may use `CodeDeck.Windows.exe` which adds an icon to the notification area on the taskbar. The icon has a context menu with easy access to the configuration file and a way to easily exit **Code Deck**.
+
+The tray menu also provides **Show Debug Log** / **Hide Debug Log**. The native
+console stays attached and continues collecting logs while hidden, preserving
+its scrollback. Its Close command (including the X button and normal Alt+F4
+closing) is disabled; use the tray menu to hide it and **Exit** to stop Code Deck.
+Launch `CodeDeck.Windows.exe --debug` to show it automatically on startup. It is
+also shown automatically when a debugger is attached.
+
+This requires classic **Windows Console Host**, not Windows Terminal's
+pseudoconsole. A dedicated console is allocated at startup even when initially
+hidden; an inherited console is detached rather than modified.
+This prevents normal console-window closing from stopping the application, but
+does not prevent termination through Task Manager or console control signals.
+
+**Plugin Tasks...** shows loaded plugins and their managed tasks, including the
+last update time and error. Plugins and tiles log through the host's `ILogger`
+pipeline; errors include exception details in the debug log. Recurring tasks retry
+at their configured interval after an update fails. Hiding the log does not
+disable logging.
 
 ![Alt text](Screenshots/01-notificationicon.png)
 
@@ -363,7 +382,16 @@ Example:
 
 **Code Deck** has a powerful, but easy to use plugin system.
 
-Plugins are located in the `Plugins`-directory. All plugins are coded in `C#` and gets compiled on startup using `Roslyn`. All the *"built in"* plugins work in the same way and their `C#`-scripts are available in the same `Plugins`-directory.
+Plugins are located in the `Plugins` directory beside the host executable. Each
+plugin has its own subdirectory containing its compiled assembly, dependency
+manifest, dependencies, and assets. Only plugins referenced by the configuration
+(including plugin-level settings) are loaded.
+
+Build either host project to stage all built-in plugins. `dotnet publish` also
+includes the complete `Plugins` directory; deploy the whole output, not just the
+host executable. Changes to plugin assemblies or assets trigger a reload from a
+shadow copy. Existing tiles are cancelled and deinitialized before the previous
+plugin's tasks and shared resources are released.
 
 Documentation for each plugin can be found as a markdown file in each plugins directory. The below table links directly to each plugins documentation.
 

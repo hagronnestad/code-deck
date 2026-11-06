@@ -35,7 +35,15 @@ public partial class NetworkTools : CodeDeckPlugin
 
                 Text = string.Format(Format, FormatIp(result, ShowIpOnTwoLines, PadOctets));
             }
-            catch (Exception) { }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                Logger.LogError(exception, "External IP update failed.");
+                throw;
+            }
             finally
             {
                 ShowIndicator = false;

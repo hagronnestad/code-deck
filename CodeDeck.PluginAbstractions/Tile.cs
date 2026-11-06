@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 
 namespace CodeDeck.PluginAbstractions
@@ -49,10 +50,36 @@ namespace CodeDeck.PluginAbstractions
         }
 
         private Image? _image;
+        private Image? _ownedImage;
+        private bool _isDeinitialized;
+        public object RenderLock { get; private set; } = new();
         public Image? Image
         {
             get => _image;
             set { Set(ref _image, value); }
+        }
+
+        protected void SetOwnedImage(Image? image)
+        {
+            lock (RenderLock)
+            {
+                if (_isDeinitialized)
+                {
+                    image?.Dispose();
+                    throw new ObjectDisposedException(GetType().Name);
+                }
+
+                var previous = _ownedImage;
+                _ownedImage = image;
+                try
+                {
+                    Image = image;
+                }
+                finally
+                {
+                    if (!ReferenceEquals(previous, image)) previous?.Dispose();
+                }
+            }
         }
 
         private int? _imagePadding;
@@ -92,6 +119,9 @@ namespace CodeDeck.PluginAbstractions
 
         public Dictionary<string, string>? Settings { get; set; }
         public PluginContext PluginContext { get; private set; } = null!;
+        private ILogger? _logger;
+        protected ILogger Logger => _logger
+            ?? throw new InvalidOperationException("The tile has not been initialized.");
         private CancellationToken _cancellationToken;
         private readonly string _taskOwner;
 
@@ -101,11 +131,32 @@ namespace CodeDeck.PluginAbstractions
             _taskOwner = $"{GetType().Name} ({Guid.NewGuid():N})";
         }
 
-        public async Task InitializeAsync(PluginContext pluginContext, CancellationToken cancellationToken)
+        public async Task InitializeAsync(
+            PluginContext pluginContext, CancellationToken cancellationToken, object? renderLock = null)
         {
+            RenderLock = renderLock ?? RenderLock;
             PluginContext = pluginContext;
+            _logger = pluginContext.CreateLogger(GetType().FullName ?? GetType().Name);
             _cancellationToken = cancellationToken;
             await Init(cancellationToken);
+        }
+
+        public async Task DeinitializeAsync()
+        {
+            try
+            {
+                await DeInit();
+            }
+            finally
+            {
+                lock (RenderLock)
+                {
+                    _isDeinitialized = true;
+                    if (ReferenceEquals(_image, _ownedImage)) _image = null;
+                    _ownedImage?.Dispose();
+                    _ownedImage = null;
+                }
+            }
         }
 
         protected void RunEvery(

@@ -1,7 +1,6 @@
 using NissanConnectLib.Api;
 using NissanConnectLib.Enums;
 using NissanConnectLib.Models;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace CodeDeck.Plugins.Plugins.Runner
@@ -20,11 +19,11 @@ namespace CodeDeck.Plugins.Plugins.Runner
         public override Task InitializeAsync(PluginContext context, CancellationToken cancellationToken)
         {
             _tokenCacheFile = Path.Combine(context.PluginPath, "token.cache");
-            RunTask("Nissan Connect initialization", token => InitAsync(Email, Password, token));
+            RunTask("Nissan Connect initialization", token => InitAsync(Email, Password, Logger, token));
             return Task.CompletedTask;
         }
 
-        private static async Task InitAsync(string? email, string? password, CancellationToken cancellationToken)
+        private static async Task InitAsync(string? email, string? password, ILogger logger, CancellationToken cancellationToken)
         {
             // Instantiate client
             _client = new NissanConnectClient(NissanConnectLib.Configuration.Region.EU);
@@ -32,7 +31,7 @@ namespace CodeDeck.Plugins.Plugins.Runner
             // Save token to cache file when refreshed
             _client.AccessTokenRefreshed += (sender, token) =>
             {
-                Debug.WriteLine("Access token refreshed!");
+                logger.LogDebug("Access token refreshed.");
                 File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
             };
 
@@ -46,12 +45,12 @@ namespace CodeDeck.Plugins.Plugins.Runner
 
                 if (await _client.GetUserId() is null)
                 {
-                    Debug.WriteLine("Could not get user ID using cached token, deleting cache file...");
+                    logger.LogWarning("Cached authentication is invalid; deleting token cache.");
                     File.Delete(_tokenCacheFile);
                 }
                 else
                 {
-                    Debug.WriteLine("Cached token is valid!");
+                    logger.LogDebug("Cached authentication is valid.");
                     loggedIn = true;
                 }
             }
@@ -65,12 +64,12 @@ namespace CodeDeck.Plugins.Plugins.Runner
                     loggedIn = await _client.LogIn(email, password);
                     if (loggedIn)
                     {
-                        Debug.WriteLine("Logged in using username and password. Writing token to cache file...");
+                        logger.LogInformation("Logged in; writing token cache.");
                         File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
                     }
                     else
                     {
-                        Debug.WriteLine("Login failed!");
+                        logger.LogError("Nissan Connect login failed.");
                         return;
                     }
                 }
@@ -80,10 +79,10 @@ namespace CodeDeck.Plugins.Plugins.Runner
             _userId = await _client.GetUserId();
             if (_userId == null)
             {
-                Debug.WriteLine("Couldn't get user!");
+                logger.LogError("Nissan Connect returned no user ID.");
                 return;
             }
-            Debug.WriteLine($"Logged in as: {_userId}");
+            logger.LogInformation("Nissan Connect initialization completed.");
         }
 
         private static async Task<Car?> GetCar(string? nickName, CancellationToken cancellationToken)
@@ -151,8 +150,13 @@ namespace CodeDeck.Plugins.Plugins.Runner
                         }
                     }
                 }
-                catch (Exception)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogError(exception, "Nissan Connect battery level update failed.");
                     Text = FormatError;
                 }
                 finally
@@ -209,8 +213,13 @@ namespace CodeDeck.Plugins.Plugins.Runner
                         }
                     }
                 }
-                catch (Exception)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogError(exception, "Nissan Connect range update failed.");
                     Text = FormatError;
                 }
                 finally
@@ -270,8 +279,13 @@ namespace CodeDeck.Plugins.Plugins.Runner
                         }
                     }
                 }
-                catch (Exception)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogError(exception, "Nissan Connect battery status age update failed.");
                     Text = FormatError;
                 }
                 finally
@@ -344,8 +358,13 @@ namespace CodeDeck.Plugins.Plugins.Runner
                         }
                     }
                 }
-                catch (Exception)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogError(exception, "Nissan Connect charge status update failed.");
                     Text = FormatError;
                 }
                 finally
