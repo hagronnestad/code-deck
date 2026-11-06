@@ -118,6 +118,7 @@ public sealed class PluginTaskManager : IPluginTaskManager
     private readonly ILogger<PluginTaskManager> _logger;
     private readonly ConcurrentDictionary<Guid, ManagedTask> _tasks = new();
     private readonly ConcurrentDictionary<string, byte> _stoppedScopes = new();
+    private readonly ConcurrentDictionary<(string ScopeId, string Owner), byte> _stoppedOwners = new();
 
     public PluginTaskManager(ILogger<PluginTaskManager> logger)
     {
@@ -182,13 +183,35 @@ public sealed class PluginTaskManager : IPluginTaskManager
         while (true)
         {
             var tasks = _tasks.Values.Where(task => task.ScopeId == scopeId).ToList();
-            if (!tasks.Any()) return;
+            if (!tasks.Any())
+            {
+                foreach (var key in _stoppedOwners.Keys.Where(key => key.ScopeId == scopeId))
+                {
+                    _stoppedOwners.TryRemove(key, out _);
+                }
+                return;
+            }
 
             _logger.LogInformation("Stopping {TaskCount} managed task(s) for plugin scope {ScopeId}.", tasks.Count, scopeId);
             foreach (var task in tasks) task.TryCancel();
 
             // The task bodies remove themselves from the dictionary and dispose their
             // cancellation token sources once they observe the cancellation.
+            await Task.WhenAll(tasks.Select(task => task.Task));
+        }
+    }
+
+    public async Task StopOwnerAsync(string scopeId, string owner)
+    {
+        _stoppedOwners.TryAdd((scopeId, owner), 0);
+        while (true)
+        {
+            var tasks = _tasks.Values
+                .Where(task => task.ScopeId == scopeId && task.Owner == owner)
+                .ToList();
+            if (tasks.Count == 0) return;
+
+            foreach (var task in tasks) task.TryCancel();
             await Task.WhenAll(tasks.Select(task => task.Task));
         }
     }
@@ -259,7 +282,7 @@ public sealed class PluginTaskManager : IPluginTaskManager
 
         // A scope that has already been stopped must not gain new work, otherwise
         // plugin code could still be running when its assembly load context is unloaded.
-        if (IsScopeStopped(scopeId))
+        if (IsScopeStopped(scopeId) || _stoppedOwners.ContainsKey((scopeId, owner)))
         {
             _logger.LogWarning(
                 "Ignoring managed task {Plugin}/{Owner}/{TaskName} for stopped plugin scope {ScopeId}.",

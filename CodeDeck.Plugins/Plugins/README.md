@@ -135,6 +135,10 @@ AssemblyLoadContext.
 
 `Init` runs after a tile is created. `OnTilePressDown` and `OnTilePressUp` handle key actions. `DeInit` runs when configuration or a plugin reload replaces the tile. Long-running work must observe the supplied cancellation token and `DeInit` must await any work the tile started before it returns.
 
+Input is ignored until initialization succeeds and after teardown starts. The host
+drains accepted key actions and each tile's managed tasks before calling `DeInit`.
+Additional task cancellation tokens are linked to, not substituted for, tile lifetime.
+
 Tile properties such as `Text`, `Image`, `BackgroundColor`, and `ShowIndicator` notify CodeDeck to redraw the key.
 
 For dynamically loaded images owned by a tile, use `SetOwnedImage(image)`. It

@@ -123,6 +123,7 @@ namespace CodeDeck.PluginAbstractions
         protected ILogger Logger => _logger
             ?? throw new InvalidOperationException("The tile has not been initialized.");
         private CancellationToken _cancellationToken;
+        private CancellationTokenSource? _lifetimeCancellation;
         private readonly string _taskOwner;
 
 
@@ -137,14 +138,21 @@ namespace CodeDeck.PluginAbstractions
             RenderLock = renderLock ?? RenderLock;
             PluginContext = pluginContext;
             _logger = pluginContext.CreateLogger(GetType().FullName ?? GetType().Name);
-            _cancellationToken = cancellationToken;
-            await Init(cancellationToken);
+            _lifetimeCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                pluginContext.CancellationToken, cancellationToken);
+            _cancellationToken = _lifetimeCancellation.Token;
+            await Init(_cancellationToken);
         }
 
         public async Task DeinitializeAsync()
         {
             try
             {
+                _lifetimeCancellation?.Cancel();
+                if (PluginContext is not null)
+                {
+                    await PluginContext.TaskManager.StopOwnerAsync(PluginContext.TaskScopeId, _taskOwner);
+                }
                 await DeInit();
             }
             finally
@@ -156,6 +164,7 @@ namespace CodeDeck.PluginAbstractions
                     _ownedImage?.Dispose();
                     _ownedImage = null;
                 }
+                _lifetimeCancellation?.Dispose();
             }
         }
 
@@ -166,14 +175,16 @@ namespace CodeDeck.PluginAbstractions
             bool runImmediately = true,
             CancellationToken cancellationToken = default)
         {
-            PluginContext.RunEvery(
+            PluginContext.TaskManager.RunRecurring(
+                PluginContext.TaskScopeId,
                 GetType().DeclaringType?.Name ?? GetType().Name,
                 _taskOwner,
                 name,
                 interval,
                 operation,
                 runImmediately,
-                cancellationToken.CanBeCanceled ? cancellationToken : _cancellationToken);
+                _cancellationToken,
+                cancellationToken);
         }
 
         protected void RunTask(
@@ -181,12 +192,14 @@ namespace CodeDeck.PluginAbstractions
             Func<CancellationToken, Task> operation,
             CancellationToken cancellationToken = default)
         {
-            PluginContext.RunTask(
+            PluginContext.TaskManager.Run(
+                PluginContext.TaskScopeId,
                 GetType().DeclaringType?.Name ?? GetType().Name,
                 _taskOwner,
                 name,
                 operation,
-                cancellationToken.CanBeCanceled ? cancellationToken : _cancellationToken);
+                _cancellationToken,
+                cancellationToken);
         }
 
         public virtual async Task Init(CancellationToken cancellationToken)

@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Windows.Extensions" Version="10.0.10" />
+    <PackageReference Include="System.Windows.Extensions" Version="10.0.14" />
     <Reference Include="AudioSwitcher.AudioApi">
       <HintPath>lib\AudioSwitcher.AudioApi.dll</HintPath>
     </Reference>

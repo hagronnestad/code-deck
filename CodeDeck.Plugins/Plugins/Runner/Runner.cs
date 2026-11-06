@@ -7,8 +7,6 @@ namespace CodeDeck.Plugins.Plugins.Runner
 {
     public class Runner : CodeDeckPlugin
     {
-        private static readonly HttpClient _httpClient = new();
-
         public class RunTile : Tile
         {
             [Setting] public string? Program { get; set; }
@@ -19,7 +17,7 @@ namespace CodeDeck.Plugins.Plugins.Runner
             {
                 if (OperatingSystem.IsWindows() && Program is not null)
                 {
-                    Image = GetAssociatedIcon(Program);
+                    SetOwnedImage(GetAssociatedIcon(Program));
                 }
 
                 return base.Init(cancellationToken);
@@ -46,11 +44,12 @@ namespace CodeDeck.Plugins.Plugins.Runner
                 var fullFileName = GetFileNameUsingEnvironmentPath(fileName);
                 if (!File.Exists(fullFileName)) return null;
 
-                var icon = System.Drawing.Icon.ExtractAssociatedIcon(fullFileName);
+                using var icon = System.Drawing.Icon.ExtractAssociatedIcon(fullFileName);
                 if (icon != null)
                 {
                     using var ms = new MemoryStream();
-                    icon.ToBitmap().Save(ms, ImageFormat.Png);
+                    using var bitmap = icon.ToBitmap();
+                    bitmap.Save(ms, ImageFormat.Png);
                     ms.Seek(0, SeekOrigin.Begin);
                     return Image.Load(ms);
                 }
@@ -81,8 +80,11 @@ namespace CodeDeck.Plugins.Plugins.Runner
                 if (Url == null) return;
 
                 var uri = new Uri(Url);
-                var favicon = await _httpClient.GetByteArrayAsync($"http://www.google.com/s2/favicons?domain={uri.Host}&sz=64");
-                Image = Image.Load(favicon);
+                var client = PluginContext.GetOrCreateSharedState("Runner.HttpClient", () => new HttpClient());
+                var favicon = await client.GetByteArrayAsync(
+                    $"https://www.google.com/s2/favicons?domain={uri.Host}&sz=64", cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                SetOwnedImage(Image.Load(favicon));
             }
 
             public override async Task OnTilePressDown(CancellationToken cancellationToken)

@@ -4,7 +4,7 @@ namespace CodeDeck
 {
     public sealed record PluginReloadResult(string PluginName, Plugin? PreviousPlugin);
 
-    public class PluginLoader
+    public class PluginLoader : IDisposable
     {
         private readonly ILogger<PluginLoader> _logger;
         private readonly ILoggerFactory _loggerFactory;
@@ -330,6 +330,14 @@ namespace CodeDeck
             }
 
             _logger.LogInformation($"Found plugin(s): {string.Join(", ", plugins.Select(x => x.Name))}");
+        }
+
+        public void Dispose()
+        {
+            _pluginFileSystemWatcher?.Dispose();
+            _pluginReloadTimer.Dispose();
+            _shutdownTokenSource.Dispose();
+            _loadLock.Dispose();
         }
     }
 }

@@ -44,6 +44,7 @@ public interface IPluginTaskManager
         CancellationToken cancellationToken);
 
     Task StopScopeAsync(string scopeId);
+    Task StopOwnerAsync(string scopeId, string owner);
 }
 
 public sealed class NoopPluginTaskManager : IPluginTaskManager
@@ -81,4 +82,5 @@ public sealed class NoopPluginTaskManager : IPluginTaskManager
     }
 
     public Task StopScopeAsync(string scopeId) => Task.CompletedTask;
+    public Task StopOwnerAsync(string scopeId, string owner) => Task.CompletedTask;
 }

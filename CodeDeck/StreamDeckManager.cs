@@ -183,8 +183,8 @@ namespace CodeDeck
                     break;
 
                 case Key.KEY_TYPE_NORMAL:
-                    if (e.IsDown) keyWrapper.HandleKeyPressDown();
-                    if (!e.IsDown) keyWrapper.HandleKeyPressUp();
+                    if (e.IsDown) _ = keyWrapper.HandleKeyPressDown();
+                    if (!e.IsDown) _ = keyWrapper.HandleKeyPressUp();
 
                     // Perform navigation if a profile and page has been set
                     if (!e.IsDown && keyWrapper.Key.Profile != null && keyWrapper.Key.Page != null)

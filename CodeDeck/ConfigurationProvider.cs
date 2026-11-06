@@ -10,7 +10,7 @@ namespace CodeDeck
         private StreamDeckConfiguration _loadedConfiguration;
         private List<FlatKeyConfiguration> _loadedFlatConfiguration;
         private readonly ILogger<ConfigurationProvider> _logger;
-        private readonly FileSystemWatcher _fileSystemWatcher;
+        private readonly FileSystemWatcher? _fileSystemWatcher;
 
         public event EventHandler? ConfigurationChanged;
 
@@ -56,6 +56,13 @@ namespace CodeDeck
 
             // Register file system watcher changed event
             _fileSystemWatcher.Changed += Handle_FileSystemWatcher_Changed;
+        }
+
+        internal ConfigurationProvider(ILogger<ConfigurationProvider> logger, StreamDeckConfiguration configuration)
+        {
+            _logger = logger;
+            _loadedConfiguration = configuration;
+            _loadedFlatConfiguration = GetFlatConfiguration(configuration);
         }
 
         private async void Handle_FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)

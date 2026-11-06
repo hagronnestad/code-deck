@@ -17,6 +17,7 @@ namespace CodeDeck.Windows
         {
             var debugConsoleRequested = Debugger.IsAttached
                 || args.Contains("--debug", StringComparer.OrdinalIgnoreCase);
+            Win32Exception? consoleError = null;
 
             try
             {
@@ -24,10 +25,9 @@ namespace CodeDeck.Windows
             }
             catch (Win32Exception ex)
             {
-                MessageBox.Show($"Could not initialize the debug console. Error: \"{ex.Message}\"\nUse Windows Console Host rather than Windows Terminal.",
-                    "Debug Log", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Environment.ExitCode = 1;
-                return;
+                FreeConsole();
+                _consoleWindow = IntPtr.Zero;
+                consoleError = ex;
             }
 
             var hostTask = CodeDeck.Program.Main(args);
@@ -39,6 +39,15 @@ namespace CodeDeck.Windows
                 return;
             }
             var logger = CodeDeck.Program.CreateLogger("CodeDeck.Windows");
+            if (consoleError is not null)
+            {
+                logger.LogWarning(consoleError, "Debug console is unavailable; continuing without it.");
+                if (debugConsoleRequested)
+                {
+                    MessageBox.Show($"The debug console is unavailable. CodeDeck will continue running.\n{consoleError.Message}\nUse Windows Console Host rather than Windows Terminal.",
+                        "Debug Log", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
 
             using var applicationContext = new ApplicationContext();
 
@@ -70,6 +79,7 @@ namespace CodeDeck.Windows
             mnuItemPluginTasks.Click += (_, _) => ShowPluginTasks();
 
             var mnuItemDebugLog = _cms.Items.Add("Show Debug Log");
+            mnuItemDebugLog.Enabled = _consoleWindow != IntPtr.Zero;
             _cms.Opening += (_, _) =>
                 mnuItemDebugLog.Text = IsWindowVisible(_consoleWindow) ? "Hide Debug Log" : "Show Debug Log";
             mnuItemDebugLog.Click += (_, _) =>

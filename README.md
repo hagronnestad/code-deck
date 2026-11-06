@@ -112,6 +112,8 @@ also shown automatically when a debugger is attached.
 This requires classic **Windows Console Host**, not Windows Terminal's
 pseudoconsole. A dedicated console is allocated at startup even when initially
 hidden; an inherited console is detached rather than modified.
+If console setup fails, Code Deck continues running without it and disables the
+debug-log menu item. An explicitly requested debug console also shows a warning.
 This prevents normal console-window closing from stopping the application, but
 does not prevent termination through Task Manager or console control signals.
 
@@ -442,6 +444,26 @@ Documentation for each plugin can be found as a markdown file in each plugins di
 
 ### Plugin Development
 Read about plugin development [here!](CodeDeck.Plugins/Plugins/)
+
+### Development checks
+
+Run the hardware-independent regression tests with:
+
+```sh
+dotnet test CodeDeck.Tests/CodeDeck.Tests.csproj -c Release
+```
+
+The tests cover tile initialization and teardown, cancellation, image ownership,
+HTTP recovery, and plugin replacement. Windows console behavior and real HID
+devices still require a hardware smoke test.
+
+SixLabors dependencies remain on ImageSharp 3.1.12, Drawing 2.1.7, and Fonts 2.1.3.
+NuGet reports known advisories for ImageSharp; these are not suppressed. Newer
+releases require a license key even for eligible open-source/hobby projects.
+A free assembly-scoped Community key can be requested at
+https://licensing.sixlabors.com/. Until one is configured, keep these buildable
+versions rather than disabling license validation. Other dependencies are updated
+independently; the NissanConnect 2.0 migration remains on its separate branch.
 
 
 ## Supported Stream Decks

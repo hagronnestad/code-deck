@@ -9,6 +9,11 @@ namespace CodeDeck
     public class KeyWrapper
     {
         private readonly ILogger _logger;
+        private readonly object _lifecycleSync = new();
+        private bool _ready;
+        private bool _stopping;
+        private int _activePresses;
+        private TaskCompletionSource? _pressesDrained;
 
         public Profile Profile { get; set; }
         public Page Page { get; set; }
@@ -92,12 +97,17 @@ namespace CodeDeck
                 Tile.NotifyChange = NotifyChange_Action;
 
                 await Tile.InitializeAsync(Plugin.Context, CancellationToken, RenderLock);
+                lock (_lifecycleSync)
+                {
+                    _ready = !_stopping && !IsCancellationRequested;
+                }
             }
             catch (OperationCanceledException) when (IsCancellationRequested)
             {
             }
             catch (Exception e)
             {
+                Cancel();
                 _logger.LogError(e, "Could not initialize {Plugin}/{Tile}.", Plugin.Name, Tile?.GetType().Name);
             }
         }
@@ -114,49 +124,63 @@ namespace CodeDeck
             Updated?.Invoke(this, this);
         }
 
-        public async void HandleKeyPressDown()
+        public Task HandleKeyPressDown() => HandleKeyPressAsync(true);
+
+        public Task HandleKeyPressUp() => HandleKeyPressAsync(false);
+
+        private async Task HandleKeyPressAsync(bool isDown)
         {
-            if (Tile == null) return;
-            if (Key.DisableTilePress is not null && Key.DisableTilePress.Value) return;
+            Tile tile;
+            lock (_lifecycleSync)
+            {
+                if (!_ready || _stopping || IsCancellationRequested || Tile is null || Key.DisableTilePress == true) return;
+                tile = Tile;
+                _activePresses++;
+            }
 
             try
             {
-                await Tile.OnTilePressDown(CancellationToken);
+                if (isDown) await tile.OnTilePressDown(CancellationToken);
+                else await tile.OnTilePressUp(CancellationToken);
             }
             catch (OperationCanceledException) when (IsCancellationRequested)
             {
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Key press down failed for {Plugin}/{Tile}.", Plugin?.Name, Tile.GetType().Name);
+                _logger.LogError(e, "Key press failed for {Plugin}/{Tile}.", Plugin?.Name, tile.GetType().Name);
             }
-        }
-
-        public async void HandleKeyPressUp()
-        {
-            if (Tile == null) return;
-            if (Key.DisableTilePress is not null && Key.DisableTilePress.Value) return;
-
-            try
+            finally
             {
-                await Tile.OnTilePressUp(CancellationToken);
-            }
-            catch (OperationCanceledException) when (IsCancellationRequested)
-            {
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Key press up failed for {Plugin}/{Tile}.", Plugin?.Name, Tile.GetType().Name);
+                lock (_lifecycleSync)
+                {
+                    if (--_activePresses == 0) _pressesDrained?.TrySetResult();
+                }
             }
         }
 
         public void Cancel()
         {
+            lock (_lifecycleSync)
+            {
+                _stopping = true;
+                _ready = false;
+            }
             CancellationTokenSource.Cancel();
         }
 
         public async Task DeinitializeAsync()
         {
+            Cancel();
+            await InitializationTask;
+            Task pressesDrained;
+            lock (_lifecycleSync)
+            {
+                pressesDrained = _activePresses == 0
+                    ? Task.CompletedTask
+                    : (_pressesDrained ??= new(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+            }
+            await pressesDrained;
             if (Tile is null) return;
 
             try

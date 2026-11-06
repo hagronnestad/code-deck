@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\CodeDeck.TestPlugin\bin\$(Configuration)\net10.0\TestPlugin.deps.json" Link="TestPlugin.deps.json" CopyToOutputDirectory="PreserveNewest" />
+    <Using Include="Xunit" />
+    <ProjectReference Include="..\CodeDeck\CodeDeck.csproj" />
+    <ProjectReference Include="..\CodeDeck.TestPlugin\CodeDeck.TestPlugin.csproj" />
+    <ProjectReference Include="..\CodeDeck.Plugins\Plugins\Runner\Runner.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
+    <ProjectReference Include="..\CodeDeck.Plugins\Plugins\WebRequest\WebRequest.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
+    <ProjectReference Include="..\CodeDeck.Plugins\Plugins\HyperXCloudAlphaWireless\HyperXCloudAlphaWireless.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
+    <ProjectReference Include="..\CodeDeck.Plugins\Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
+    <ProjectReference Include="..\CodeDeck.Plugins\Plugins\SteelSeriesRival3Wireless\SteelSeriesRival3Wireless.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
+    <ProjectReference Include="..\CodeDeck.Plugins\Plugins\LogitechMice\LogitechMice.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
+  </ItemGroup>
+
+</Project>
