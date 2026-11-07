@@ -11,6 +11,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp;
 using StreamDeckSharp;
 using System.Collections.Concurrent;
+using Path = System.IO.Path;
 
 namespace CodeDeck
 {
@@ -28,6 +29,8 @@ namespace CodeDeck
         private readonly FontCollection _fontCollection = new();
         private readonly ConcurrentDictionary<(string, float, FontStyle), Font> _fontCache = new();
         private readonly Stack<NavigationItem> _navigationStack = new();
+        private readonly object _navigationLock = new();
+        private long _renderGeneration;
         private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
         private NavigationItem? _currentPage;
         private int _stopping;
@@ -38,6 +41,16 @@ namespace CodeDeck
             ConfigurationProvider configurationProvider,
             ProcessMonitor processMonitor,
             PluginLoader pluginLoader
+        ) : this(logger, configurationProvider, processMonitor, pluginLoader, null)
+        {
+        }
+
+        internal StreamDeckManager(
+            ILogger<StreamDeckManager> logger,
+            ConfigurationProvider configurationProvider,
+            ProcessMonitor processMonitor,
+            PluginLoader pluginLoader,
+            IMacroBoard? streamDeck
         )
         {
             _logger = logger;
@@ -49,17 +62,17 @@ namespace CodeDeck
             _pluginLoader.PluginsChanged += PluginLoader_PluginsChanged;
 
             _fontCollection.AddSystemFonts();
-            _fontCollection.Add("Fonts/Twemoji.Mozilla.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-Bold.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-BoldItalic.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-Italic.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-Light.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-LightItalic.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-Medium.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-MediumItalic.ttf");
-            _fontCollection.Add("Fonts/Ubuntu-Regular.ttf");
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Twemoji.Mozilla.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-Bold.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-BoldItalic.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-Italic.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-Light.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-LightItalic.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-Medium.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-MediumItalic.ttf"));
+            _fontCollection.Add(Path.Combine(AppContext.BaseDirectory, "Fonts/Ubuntu-Regular.ttf"));
 
-            var sd = OpenStreamDeck();
+            var sd = streamDeck ?? OpenStreamDeck();
 
             if (sd is null)
             {
@@ -96,7 +109,9 @@ namespace CodeDeck
 
         private void ProcessMonitor_ProcessExited(object? sender, string e)
         {
-            if (_currentPage is null) return;
+            NavigationItem? currentPage;
+            lock (_navigationLock) currentPage = _currentPage;
+            if (currentPage is null) return;
 
             var flatKeyConfiguration = _configurationProvider.LoadedFlatConfiguration
                 .FirstOrDefault(x => string.Equals(
@@ -108,10 +123,10 @@ namespace CodeDeck
             // If ProcessStartedTriggerNavigatePreviousOnExit is true and the current page is the
             // same page that was navigated to by ProcessStartedTrigger then navigate to the previous page
             if (flatKeyConfiguration.Page.ProcessStartedTriggerNavigatePreviousOnExit
-                && _currentPage.ProfileName == flatKeyConfiguration.Profile.Name
-                && _currentPage.PageName == flatKeyConfiguration.Page.Name)
+                && currentPage.ProfileName == flatKeyConfiguration.Profile.Name
+                && currentPage.PageName == flatKeyConfiguration.Page.Name)
             {
-                NavigateToPreviousPage();
+                NavigateToPreviousPage(currentPage);
             }
         }
 
@@ -169,10 +184,11 @@ namespace CodeDeck
 
         private void StreamDeck_KeyStateChanged(object? sender, KeyEventArgs e)
         {
-            var keyWrapper = KeyWrappers
-                .Where(x => x.IsShowing)
-                .Where(x => x.Key.Index == e.Key)
-                .FirstOrDefault();
+            KeyWrapper? keyWrapper;
+            lock (_navigationLock)
+            {
+                keyWrapper = KeyWrappers.FirstOrDefault(x => x.IsShowing && x.Key.Index == e.Key);
+            }
 
             if (keyWrapper == null) return;
 
@@ -351,8 +367,14 @@ namespace CodeDeck
             ClearKeys();
 
             // Show Code Deck icon while applying configuration
-            _streamDeck?.SetKeyBitmap(_streamDeck.Keys.CountX / 2,
-                KeyBitmap.Create.FromImageSharpImage(Image.Load("Images/icon.png")));
+            using (var icon = Image.Load(Path.Combine(AppContext.BaseDirectory, "Images/icon.png")))
+            {
+                lock (_navigationLock)
+                {
+                    _streamDeck.SetKeyBitmap(_streamDeck.Keys.CountX / 2,
+                        KeyBitmap.Create.FromImageSharpImage(icon));
+                }
+            }
 
             // Clear and update monitored processes based on configuration
             _processMonitor.Clear();
@@ -384,7 +406,9 @@ namespace CodeDeck
 
             await CreateKeyWrappers();
 
-            if (_navigationStack.Count == 0)
+            bool hasNavigation;
+            lock (_navigationLock) hasNavigation = _navigationStack.Count > 0;
+            if (!hasNavigation)
             {
                 // Navigate to first page if no page exists on the navigation stack
                 NavigateToPage(profile.Name, page.Name);
@@ -434,7 +458,7 @@ namespace CodeDeck
         /// <see cref="RemoveKeyWrappers"/> so device and navigation threads never
         /// observe a partially updated collection.
         /// </summary>
-        private IReadOnlyList<KeyWrapper> KeyWrappers => Volatile.Read(ref _keyWrappers);
+        internal IReadOnlyList<KeyWrapper> KeyWrappers => Volatile.Read(ref _keyWrappers);
 
         private void AddKeyWrappers(IEnumerable<KeyWrapper> keyWrappers)
         {
@@ -465,6 +489,11 @@ namespace CodeDeck
             if (!keyWrappers.Any()) return;
 
             _logger.LogInformation($"Deinitializing {keyWrappers.Count} tile(s).");
+            lock (_navigationLock)
+            {
+                keyWrappers.ForEach(keyWrapper => keyWrapper.IsShowing = false);
+                RemoveKeyWrappers(keyWrappers);
+            }
             keyWrappers.ForEach(keyWrapper =>
             {
                 keyWrapper.Updated -= KeyWrapper_Updated;
@@ -478,7 +507,6 @@ namespace CodeDeck
                 .Select(keyWrapper => keyWrapper.DeinitializeAsync()));
 
             keyWrappers.ForEach(keyWrapper => keyWrapper.Dispose());
-            RemoveKeyWrappers(keyWrappers);
         }
 
         public async Task StopAsync()
@@ -549,55 +577,67 @@ namespace CodeDeck
             var page = profile?.Pages.FirstOrDefault(x => x.Name == pageName);
             if (profile == null || page == null) return;
 
-            // Prevent navigating to the same page as the current page
-            if (_currentPage is not null)
+            (IReadOnlyList<KeyWrapper> Wrappers, long Generation) refresh;
+            lock (_navigationLock)
             {
-                if (_currentPage.ProfileName == profile.Name && _currentPage.PageName == page.Name) return;
+                if (Volatile.Read(ref _stopping) != 0) return;
+                var navigationItem = new NavigationItem(profile.Name, page.Name);
+                if (_currentPage == navigationItem) return;
+
+                _navigationStack.Push(navigationItem);
+                _currentPage = navigationItem;
+                refresh = PreparePageRefresh();
             }
 
-            // Update navigation stack and current page
-            var navigationItem = new NavigationItem(profile.Name, page.Name);
-            _navigationStack.Push(navigationItem);
-            _currentPage = navigationItem;
-
-            RefreshPage();
+            RenderPage(refresh.Wrappers, refresh.Generation);
         }
 
-        public void NavigateToPreviousPage()
+        public void NavigateToPreviousPage() => NavigateToPreviousPage(null);
+
+        private void NavigateToPreviousPage(NavigationItem? expectedPage)
         {
-            // Return if there is no page to navigate back to
-            if (_navigationStack.Count < 2) return;
+            (IReadOnlyList<KeyWrapper> Wrappers, long Generation) refresh;
+            lock (_navigationLock)
+            {
+                if (Volatile.Read(ref _stopping) != 0 || _navigationStack.Count < 2) return;
+                if (expectedPage is not null && _currentPage != expectedPage) return;
 
-            // Pop the current page of the navigation stack
-            _navigationStack.Pop();
-
-            // Pop the previous page of the navigation stack
-            var previousPage = _navigationStack.Pop();
-
-            // Navigate to the previous page
-            NavigateToPage(previousPage.ProfileName, previousPage.PageName);
+                _navigationStack.Pop();
+                _currentPage = _navigationStack.Peek();
+                refresh = PreparePageRefresh();
+            }
+            RenderPage(refresh.Wrappers, refresh.Generation);
         }
 
         public void RefreshPage()
         {
+            (IReadOnlyList<KeyWrapper> Wrappers, long Generation) refresh;
+            lock (_navigationLock)
+            {
+                if (Volatile.Read(ref _stopping) != 0) return;
+                refresh = PreparePageRefresh();
+            }
+            RenderPage(refresh.Wrappers, refresh.Generation);
+        }
+
+        private (IReadOnlyList<KeyWrapper> Wrappers, long Generation) PreparePageRefresh()
+        {
+            _renderGeneration++;
             _streamDeck.ClearKeys();
-
-            if (_currentPage is null) return;
-
-            // Update IsShowing property
             var keyWrappers = KeyWrappers;
             foreach (var k in keyWrappers)
             {
-                k.IsShowing = k.Profile.Name == _currentPage.ProfileName && k.Page.Name == _currentPage.PageName;
+                k.IsShowing = k.Profile.Name == _currentPage?.ProfileName && k.Page.Name == _currentPage?.PageName;
             }
 
-            var keyWrappersForCurrentPage = keyWrappers.Where(x => x.IsShowing).ToList();
-            if (!keyWrappersForCurrentPage.Any()) return;
+            return (keyWrappers.Where(x => x.IsShowing).ToArray(), _renderGeneration);
+        }
 
-            foreach (var keyWrapper in keyWrappersForCurrentPage)
+        private void RenderPage(IReadOnlyList<KeyWrapper> keyWrappers, long generation)
+        {
+            foreach (var keyWrapper in keyWrappers)
             {
-                keyWrapper.CachedComposedKeyBitmapImage = CreateKeyBitmap(keyWrapper);
-                _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index, keyWrapper.CachedComposedKeyBitmapImage);
+                RenderAndPresent(keyWrapper, generation);
             }
         }
 
@@ -608,36 +648,43 @@ namespace CodeDeck
         /// <param name="keyWrapper"></param>
         private void KeyWrapper_Updated(object? sender, KeyWrapper keyWrapper)
         {
-            if (keyWrapper is null) return;
-
-            // Only update the key bitmap if the key is currently showing
-            // This optimizes resource usage by keys that are not currently showing
-            // We call CreateKeyBitmap on demand when navigating to a new page instead
-            if (keyWrapper.IsShowing)
+            long generation;
+            lock (_navigationLock)
             {
-                keyWrapper.CachedComposedKeyBitmapImage = CreateKeyBitmap(keyWrapper);
+                if (!keyWrapper.IsShowing || Volatile.Read(ref _stopping) != 0) return;
+                generation = _renderGeneration;
             }
+            RenderAndPresent(keyWrapper, generation);
+        }
 
-            // It's intended to check IsShowing again here
-            // The key might not be showing anymore if a page navigation happened while
-            // waiting for creation of the new key bitmap, in rare occations that might
-            // lead to setting the key bitmap while on the wrong page
-            // TODO: Fix with locking?
-            if (keyWrapper.IsShowing)
+        private void RenderAndPresent(KeyWrapper keyWrapper, long generation)
+        {
+            // Never take a tile's RenderLock while holding _navigationLock: image
+            // updates notify synchronously while already holding that tile lock.
+            var bitmap = CreateKeyBitmap(keyWrapper);
+            lock (_navigationLock)
             {
-                _streamDeck?.SetKeyBitmap(keyWrapper.Key.Index, keyWrapper.CachedComposedKeyBitmapImage);
+                if (generation != _renderGeneration || !keyWrapper.IsShowing || Volatile.Read(ref _stopping) != 0) return;
+                keyWrapper.CachedComposedKeyBitmapImage = bitmap;
+                _streamDeck.SetKeyBitmap(keyWrapper.Key.Index, bitmap);
             }
         }
 
         public void ClearKeys()
         {
-            _streamDeck?.ClearKeys();
+            lock (_navigationLock)
+            {
+                _renderGeneration++;
+                foreach (var keyWrapper in KeyWrappers) keyWrapper.IsShowing = false;
+                _streamDeck.ClearKeys();
+            }
         }
 
-        public KeyBitmap CreateKeyBitmap(KeyWrapper keyWrapper)
+        public virtual KeyBitmap CreateKeyBitmap(KeyWrapper keyWrapper)
         {
             lock (keyWrapper.RenderLock)
             {
+                if (keyWrapper.IsDisposed) return KeyBitmap.Black;
                 // The composed tile bitmap is only an intermediate: KeyBitmap copies the
                 // pixel data out of it. Disposing returns the buffer to ImageSharp's pool
                 // instead of leaving it for the finalizer.

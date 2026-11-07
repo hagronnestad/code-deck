@@ -37,6 +37,7 @@ namespace CodeDeck
         /// </summary>
         public KeyBitmap? CachedComposedKeyBitmapImage { get; set; }
         internal object RenderLock { get; } = new();
+        internal bool IsDisposed { get; private set; }
 
         private Image? _scaledImageSource;
         private Image? _scaledImage;
@@ -200,6 +201,7 @@ namespace CodeDeck
 
             lock (RenderLock)
             {
+                IsDisposed = true;
                 _scaledImage?.Dispose();
                 _scaledImage = null;
                 _scaledImageSource = null;

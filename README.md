@@ -454,8 +454,8 @@ dotnet test CodeDeck.Tests/CodeDeck.Tests.csproj -c Release
 ```
 
 The tests cover tile initialization and teardown, cancellation, image ownership,
-HTTP recovery, and plugin replacement. Windows console behavior and real HID
-devices still require a hardware smoke test.
+HTTP recovery, plugin replacement, and navigation during in-flight redraws.
+Windows console behavior and real HID devices still require a hardware smoke test.
 
 SixLabors dependencies remain on ImageSharp 3.1.12, Drawing 2.1.7, and Fonts 2.1.3.
 NuGet reports known advisories for ImageSharp; these are not suppressed. Newer
