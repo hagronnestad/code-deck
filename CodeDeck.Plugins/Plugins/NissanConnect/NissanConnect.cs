@@ -1,378 +1,326 @@
 using NissanConnectLib.Api;
 using NissanConnectLib.Enums;
 using NissanConnectLib.Models;
+using System.Net;
 using System.Text.Json;
 
 namespace CodeDeck.Plugins.Plugins.Runner
 {
     public class NissanConnect : CodeDeckPlugin
     {
+        private const string SessionKey = "NissanConnect.Session";
+
         [Setting] public string? Email { get; set; }
         [Setting] public string? Password { get; set; }
 
-        private static string _tokenCacheFile = string.Empty;
-
-        private static NissanConnectClient _client = new();
-        private static string? _userId = null;
-
-
         public override Task InitializeAsync(PluginContext context, CancellationToken cancellationToken)
         {
-            _tokenCacheFile = Path.Combine(context.PluginPath, "token.cache");
-            RunTask("Nissan Connect initialization", token => InitAsync(Email, Password, Logger, token));
+            var session = context.GetOrCreateSharedState(
+                SessionKey,
+                () => new NissanConnectSession(context.PluginPath, Email, Password, Logger));
+            RunTask("Nissan Connect initialization", session.InitializeAsync);
             return Task.CompletedTask;
         }
 
-        private static async Task InitAsync(string? email, string? password, ILogger logger, CancellationToken cancellationToken)
+        private static NissanConnectSession GetSession(PluginContext context) =>
+            context.GetOrCreateSharedState<NissanConnectSession>(
+                SessionKey,
+                () => throw new InvalidOperationException("Nissan Connect has not been initialized."));
+
+        private sealed class NissanConnectSession : IDisposable
         {
-            // Instantiate client
-            _client = new NissanConnectClient(NissanConnectLib.Configuration.Region.EU);
+            private readonly NissanConnectClient _client = new(NissanConnectLib.Configuration.Region.EU);
+            private readonly SemaphoreSlim _authenticationLock = new(1, 1);
+            private readonly object _tokenCacheLock = new();
+            private readonly string _tokenCacheFile;
+            private readonly string? _email;
+            private readonly string? _password;
+            private readonly ILogger _logger;
+            private string? _userId;
+            private bool _cacheLoaded;
+            private volatile bool _hasLoggedIn;
 
-            // Save token to cache file when refreshed
-            _client.AccessTokenRefreshed += (sender, token) =>
+            public NissanConnectSession(string pluginPath, string? email, string? password, ILogger logger)
             {
-                logger.LogDebug("Access token refreshed.");
-                File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
-            };
-
-            var loggedIn = false;
-
-            // Try to use token cache file
-            if (File.Exists(_tokenCacheFile))
-            {
-                var cachedToken = JsonSerializer.Deserialize<OAuthAccessTokenResult>(File.ReadAllText(_tokenCacheFile));
-                _client.AccessToken = cachedToken;
-
-                if (await _client.GetUserId() is null)
+                _tokenCacheFile = Path.Combine(pluginPath, "token.cache");
+                _email = email;
+                _password = password;
+                _logger = logger;
+                _client.AccessTokenRefreshed += (_, token) =>
                 {
-                    logger.LogWarning("Cached authentication is invalid; deleting token cache.");
-                    File.Delete(_tokenCacheFile);
+                    _logger.LogDebug("Access token refreshed.");
+                    SaveToken(token);
+                };
+            }
+
+            private void SaveToken(OAuthAccessTokenResult token)
+            {
+                lock (_tokenCacheLock)
+                {
+                    // Do not let an older refresh overwrite a newer login's token.
+                    if (ReferenceEquals(token, _client.AccessToken))
+                    {
+                        File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(token));
+                    }
+                }
+            }
+
+            public async Task InitializeAsync(CancellationToken cancellationToken)
+            {
+                await _authenticationLock.WaitAsync(cancellationToken);
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (_userId is not null) return;
+
+                    if (!_cacheLoaded)
+                    {
+                        _cacheLoaded = true;
+                        if (File.Exists(_tokenCacheFile))
+                        {
+                            _client.AccessToken = JsonSerializer.Deserialize<OAuthAccessTokenResult>(
+                                File.ReadAllText(_tokenCacheFile))
+                                ?? throw new InvalidOperationException("Nissan Connect token cache is empty.");
+                        }
+                    }
+
+                    if (_client.AccessToken is not null)
+                    {
+                        try
+                        {
+                            _userId = await _client.GetUserId();
+                            if (_userId is not null) _logger.LogDebug("Cached authentication is valid.");
+                        }
+                        catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.Unauthorized)
+                        {
+                            _logger.LogWarning("Cached authentication is invalid; deleting token cache.");
+                            _client.LogOut();
+                            File.Delete(_tokenCacheFile);
+                        }
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (_userId is null) await LogInAsync(cancellationToken);
+                    _logger.LogInformation("Nissan Connect initialization completed.");
+                }
+                finally
+                {
+                    _authenticationLock.Release();
+                }
+            }
+
+            private async Task LogInAsync(CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrEmpty(_password))
+                {
+                    throw new InvalidOperationException("Nissan Connect requires an email and password to log in.");
+                }
+
+                await _client.LogIn(_email, _password);
+                _hasLoggedIn = true;
+                cancellationToken.ThrowIfCancellationRequested();
+                _logger.LogInformation("Logged in; writing token cache.");
+                SaveToken(_client.AccessToken
+                    ?? throw new InvalidOperationException("Nissan Connect login returned no token."));
+                _userId = await _client.GetUserId()
+                    ?? throw new InvalidOperationException("Nissan Connect returned no user ID.");
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            private async Task<T> RequestAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+            {
+                await InitializeAsync(cancellationToken);
+                var hasLoggedIn = _hasLoggedIn;
+                T result;
+                try
+                {
+                    result = await operation();
+                }
+                catch (HttpRequestException exception) when (
+                    exception.StatusCode == HttpStatusCode.Unauthorized && !hasLoggedIn)
+                {
+                    await _authenticationLock.WaitAsync(cancellationToken);
+                    try
+                    {
+                        // The library cannot use configured credentials after a cached-token startup.
+                        if (!_hasLoggedIn) await LogInAsync(cancellationToken);
+                    }
+                    finally
+                    {
+                        _authenticationLock.Release();
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    result = await operation();
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+                return result;
+            }
+
+            public async Task<AttributesBatteryStatus> GetBatteryStatusAsync(
+                string? vin, string? nickName, bool forceRefresh, CancellationToken cancellationToken)
+            {
+                var cars = await RequestAsync(
+                    () => _client.GetCars(_userId
+                        ?? throw new InvalidOperationException("Nissan Connect has no authenticated user.")),
+                    cancellationToken)
+                    ?? throw new InvalidOperationException("Nissan Connect returned no vehicle list.");
+
+                Car? car;
+                if (!string.IsNullOrWhiteSpace(vin))
+                {
+                    car = cars.FirstOrDefault(
+                        car => string.Equals(car.Vin, vin, StringComparison.OrdinalIgnoreCase));
+                }
+                else if (!string.IsNullOrWhiteSpace(nickName))
+                {
+                    car = cars.FirstOrDefault(car =>
+                        string.Equals(car.NickName, nickName, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(car.VehicleNickName, nickName, StringComparison.OrdinalIgnoreCase));
                 }
                 else
                 {
-                    logger.LogDebug("Cached authentication is valid.");
-                    loggedIn = true;
+                    car = cars.FirstOrDefault();
                 }
-            }
 
-            // Log in using username and password
-            if (!loggedIn)
-            {
-                // Log in using a username and password
-                if (email is not null && password is not null)
+                if (car is null)
                 {
-                    loggedIn = await _client.LogIn(email, password);
-                    if (loggedIn)
-                    {
-                        logger.LogInformation("Logged in; writing token cache.");
-                        File.WriteAllText(_tokenCacheFile, JsonSerializer.Serialize(_client.AccessToken));
-                    }
-                    else
-                    {
-                        logger.LogError("Nissan Connect login failed.");
-                        return;
-                    }
+                    throw new InvalidOperationException("Nissan Connect could not find the configured vehicle.");
                 }
+                if (string.IsNullOrWhiteSpace(car.Vin))
+                {
+                    throw new InvalidOperationException("Nissan Connect returned a vehicle without a VIN.");
+                }
+
+                if (forceRefresh)
+                {
+                    if (!await RequestAsync(() => _client.RefreshBatteryStatus(car.Vin), cancellationToken))
+                    {
+                        throw new InvalidOperationException("Nissan Connect rejected the battery refresh request.");
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+                }
+
+                return await RequestAsync(() => _client.GetBatteryStatus(car.Vin), cancellationToken)
+                    ?? throw new InvalidOperationException("Nissan Connect returned no battery status.");
             }
 
-            // Get the user id
-            _userId = await _client.GetUserId();
-            if (_userId == null)
+            public void Dispose()
             {
-                logger.LogError("Nissan Connect returned no user ID.");
-                return;
+                _client.Dispose();
+                _authenticationLock.Dispose();
             }
-            logger.LogInformation("Nissan Connect initialization completed.");
         }
 
-        private static async Task<Car?> GetCar(string? nickName, CancellationToken cancellationToken)
+        public abstract class NissanConnectTile : Tile
         {
-            // TODO: Fix this hack to prevent first tile Update calls to fail
-            // Wait until logged in
-            while (_userId is null)
-            {
-                await Task.Delay(1000, cancellationToken);
-            }
+            private readonly SemaphoreSlim _updateLock = new(1, 1);
 
-            var cars = await _client.GetCars(_userId);
-
-            var car = nickName is null ?
-                (cars?.FirstOrDefault()) :
-                (cars?.FirstOrDefault(c => c.VehicleNickName?.ToLower() == nickName.ToLower()));
-
-            return car;
-        }
-
-        public class NissanConnectBatteryLevelTile : Tile
-        {
             [Setting] public int Interval { get; set; } = 10; // minutes
+            [Setting] public string? Vin { get; set; }
             [Setting] public string? NickName { get; set; }
             [Setting] public bool ForceRefreshAuto { get; set; } = false;
             [Setting] public bool ForceRefreshTilePress { get; set; } = false;
+            [Setting] public string FormatError { get; set; } = "🚗❌";
+
+            protected abstract string InitialText { get; }
+            protected abstract string UpdateName { get; }
+            protected abstract string FormatStatus(AttributesBatteryStatus status);
+
+            public override Task Init(CancellationToken cancellationToken)
+            {
+                Text = InitialText;
+                RunEvery(UpdateName, TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
+                return Task.CompletedTask;
+            }
+
+            public override Task OnTilePressDown(CancellationToken cancellationToken) =>
+                Update(ForceRefreshTilePress, cancellationToken);
+
+            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
+            {
+                await _updateLock.WaitAsync(cancellationToken);
+                try
+                {
+                    ShowIndicator = true;
+                    var status = await GetSession(PluginContext)
+                        .GetBatteryStatusAsync(Vin, NickName, forceRefresh, cancellationToken);
+                    Text = FormatStatus(status);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception)
+                {
+                    Text = FormatError;
+                    throw;
+                }
+                finally
+                {
+                    ShowIndicator = false;
+                    _updateLock.Release();
+                }
+            }
+        }
+
+        public class NissanConnectBatteryLevelTile : NissanConnectTile
+        {
             [Setting] public string Format { get; set; } = "{0}";
-            [Setting] public string FormatError { get; set; } = "🚗❌";
 
-            private Car? _car;
+            protected override string InitialText => "Nissan\nConnect\nBattery\nLevel";
+            protected override string UpdateName => "Battery level update";
 
-            public override async Task Init(CancellationToken cancellationToken)
-            {
-                await base.Init(cancellationToken);
-                Text = "Nissan\nConnect\nBattery\nLevel";
-                RunEvery("Battery level update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
-            }
-
-            public override async Task OnTilePressDown(CancellationToken cancellationToken)
-            {
-                await Update(ForceRefreshTilePress, cancellationToken);
-                await base.OnTilePressDown(cancellationToken);
-            }
-
-            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
-            {
-                try
-                {
-                    ShowIndicator = true;
-
-                    _car = await GetCar(NickName, cancellationToken);
-
-                    if (_car is not null && _car.Vin is not null)
-                    {
-                        var bs = await _client.GetBatteryStatus(_car.Vin, forceRefresh, TimeSpan.FromSeconds(60));
-
-                        if (bs is null)
-                        {
-                            Text = FormatError;
-                        }
-                        else
-                        {
-                            Text = string.Format(Format, bs.BatteryLevel, bs.ChargeStatus,
-                                $"{bs.BatteryStatusAge?.TotalMinutes:N0}");
-                        }
-                    }
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    Logger.LogError(exception, "Nissan Connect battery level update failed.");
-                    Text = FormatError;
-                }
-                finally
-                {
-                    ShowIndicator = false;
-                }
-            }
-
+            protected override string FormatStatus(AttributesBatteryStatus status) =>
+                string.Format(Format, status.BatteryLevel, status.ChargeStatus,
+                    $"{status.BatteryStatusAge?.TotalMinutes:N0}");
         }
 
-        public class NissanConnectRangeTile : Tile
+        public class NissanConnectRangeTile : NissanConnectTile
         {
-            [Setting] public int Interval { get; set; } = 10; // minutes
-            [Setting] public string? NickName { get; set; }
-            [Setting] public bool ForceRefreshAuto { get; set; } = false;
-            [Setting] public bool ForceRefreshTilePress { get; set; } = false;
             [Setting] public string Format { get; set; } = "🏁\n{0} km\n({1} km)";
-            [Setting] public string FormatError { get; set; } = "🚗❌";
 
-            private Car? _car;
+            protected override string InitialText => "Nissan\nConnect\nRange";
+            protected override string UpdateName => "Range update";
 
-            public override async Task Init(CancellationToken cancellationToken)
-            {
-                await base.Init(cancellationToken);
-                Text = "Nissan\nConnect\nBattery\nLevel";
-                RunEvery("Range update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
-            }
-
-            public override async Task OnTilePressDown(CancellationToken cancellationToken)
-            {
-                await Update(ForceRefreshTilePress, cancellationToken);
-                await base.OnTilePressDown(cancellationToken);
-            }
-
-            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
-            {
-                try
-                {
-                    ShowIndicator = true;
-
-                    _car = await GetCar(NickName, cancellationToken);
-
-                    if (_car is not null && _car.Vin is not null)
-                    {
-                        var bs = await _client.GetBatteryStatus(_car.Vin, forceRefresh, TimeSpan.FromSeconds(60));
-
-                        if (bs is null)
-                        {
-                            Text = FormatError;
-                        }
-                        else
-                        {
-                            Text = string.Format(Format, bs.RangeHvacOn, bs.RangeHvacOff);
-                        }
-                    }
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    Logger.LogError(exception, "Nissan Connect range update failed.");
-                    Text = FormatError;
-                }
-                finally
-                {
-                    ShowIndicator = false;
-                }
-            }
-
+            protected override string FormatStatus(AttributesBatteryStatus status) =>
+                string.Format(Format, status.RangeHvacOn, status.RangeHvacOff);
         }
 
-        public class NissanConnectBatteryStatusAge : Tile
+        public class NissanConnectBatteryStatusAge : NissanConnectTile
         {
-            [Setting] public int Interval { get; set; } = 10; // minutes
-            [Setting] public string? NickName { get; set; }
-            [Setting] public bool ForceRefreshAuto { get; set; } = false;
-            [Setting] public bool ForceRefreshTilePress { get; set; } = false;
             [Setting] public string Format { get; set; } = "{0}\n{1}";
-            [Setting] public string FormatAge { get; set; } = "HH\\:mm";
+            [Setting] public string FormatAge { get; set; } = "hh\\:mm";
             [Setting] public string FormatDateTime { get; set; } = "HH\\:mm";
-            [Setting] public string FormatError { get; set; } = "🚗❌";
 
-            private Car? _car;
+            protected override string InitialText => "Nissan\nConnect\nBattery\nStatus";
+            protected override string UpdateName => "Battery status age update";
 
-            public override async Task Init(CancellationToken cancellationToken)
-            {
-                Text = "Nissan\nConnect\nBattery\nStatus";
-                _car = await GetCar(NickName, cancellationToken);
-                RunEvery("Battery status age update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
-                await base.Init(cancellationToken);
-            }
-
-            public override async Task OnTilePressDown(CancellationToken cancellationToken)
-            {
-                await Update(ForceRefreshTilePress, cancellationToken);
-                await base.OnTilePressDown(cancellationToken);
-            }
-
-            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
-            {
-                try
-                {
-                    ShowIndicator = true;
-
-                    if (_car is not null && _car.Vin is not null)
-                    {
-                        var bs = await _client.GetBatteryStatus(_car.Vin);
-
-                        if (bs is null)
-                        {
-                            Text = FormatError;
-                        }
-                        else
-                        {
-                            var batteryStatusAge = bs.BatteryStatusAge?.ToString(FormatAge);
-                            var updateDateTime = bs.LastUpdateTime?.ToLocalTime().ToString(FormatDateTime);
-                            Text = string.Format(Format, batteryStatusAge, updateDateTime);
-                        }
-                    }
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    Logger.LogError(exception, "Nissan Connect battery status age update failed.");
-                    Text = FormatError;
-                }
-                finally
-                {
-                    ShowIndicator = false;
-                }
-            }
-
+            protected override string FormatStatus(AttributesBatteryStatus status) =>
+                string.Format(Format, status.BatteryStatusAge?.ToString(FormatAge),
+                    status.LastUpdateTime?.ToLocalTime().ToString(FormatDateTime));
         }
 
-        public class NissanConnectChargeStatus : Tile
+        public class NissanConnectChargeStatus : NissanConnectTile
         {
-            [Setting] public int Interval { get; set; } = 10; // minutes
-            [Setting] public string? NickName { get; set; }
-            [Setting] public bool ForceRefreshAuto { get; set; } = false;
-            [Setting] public bool ForceRefreshTilePress { get; set; } = false;
             [Setting] public string FormatNotCharging { get; set; } = "🔋";
             [Setting] public string FormatCharging { get; set; } = "⚡";
             [Setting] public string FormatPluggedIn { get; set; } = "🔌";
-            [Setting] public string FormatError { get; set; } = "🚗❌";
 
-            private Car? _car;
+            protected override string InitialText => "Nissan\nConnect\nCharge\nStatus";
+            protected override string UpdateName => "Charge status update";
 
-            public override async Task Init(CancellationToken cancellationToken)
-            {
-                Text = "Nissan\nConnect\nCharge\nStatus";
-                _car = await GetCar(NickName, cancellationToken);
-                RunEvery("Charge status update", TimeSpan.FromMinutes(Interval), token => Update(ForceRefreshAuto, token));
-                await base.Init(cancellationToken);
-            }
-
-            public override async Task OnTilePressDown(CancellationToken cancellationToken)
-            {
-                await Update(ForceRefreshTilePress, cancellationToken);
-                await base.OnTilePressDown(cancellationToken);
-            }
-
-            private async Task Update(bool forceRefresh, CancellationToken cancellationToken)
-            {
-                try
+            protected override string FormatStatus(AttributesBatteryStatus status) =>
+                (status.ChargeStatus, status.PlugStatus) switch
                 {
-                    ShowIndicator = true;
-
-                    if (_car is not null && _car.Vin is not null)
-                    {
-                        var bs = await _client.GetBatteryStatus(_car.Vin);
-
-                        if (bs is null)
-                        {
-                            Text = FormatError;
-                        }
-                        else
-                        {
-                            if (bs.ChargeStatus == ChargeStatus.NotCharging)
-                            {
-                                Text = FormatNotCharging;
-                            }
-                            if (bs.PlugStatus == PlugStatus.PluggedIn)
-                            {
-                                Text = FormatPluggedIn;
-                            }
-                            if (bs.ChargeStatus == ChargeStatus.Charging)
-                            {
-                                Text = FormatCharging;
-                            }
-                            if (bs.ChargeStatus == ChargeStatus.Error || bs.PlugStatus == PlugStatus.Error)
-                            {
-                                Text = FormatError;
-                            }
-                        }
-                    }
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    Logger.LogError(exception, "Nissan Connect charge status update failed.");
-                    Text = FormatError;
-                }
-                finally
-                {
-                    ShowIndicator = false;
-                }
-            }
-
+                    (ChargeStatus.NotCharging, PlugStatus.NotPluggedIn) => FormatNotCharging,
+                    (ChargeStatus.NotCharging, PlugStatus.PluggedIn) => FormatPluggedIn,
+                    (ChargeStatus.Charging, PlugStatus.PluggedIn) => FormatCharging,
+                    _ => throw new InvalidOperationException(
+                        $"Nissan Connect returned invalid or inconsistent charge/plug states ({status.ChargeStatus}, {status.PlugStatus}).")
+                };
         }
     }
 }

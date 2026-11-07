@@ -24,6 +24,7 @@
     <ProjectReference Include="..\CodeDeck.Plugins\Plugins\HyperXCloudFlightWireless\HyperXCloudFlightWireless.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
     <ProjectReference Include="..\CodeDeck.Plugins\Plugins\SteelSeriesRival3Wireless\SteelSeriesRival3Wireless.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
     <ProjectReference Include="..\CodeDeck.Plugins\Plugins\LogitechMice\LogitechMice.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
+    <ProjectReference Include="..\CodeDeck.Plugins\Plugins\NissanConnect\NissanConnect.csproj" AdditionalProperties="PluginStagingDirectory=$(MSBuildProjectDirectory)\bin\$(Configuration)\PluginStaging" />
   </ItemGroup>
 
 </Project>
