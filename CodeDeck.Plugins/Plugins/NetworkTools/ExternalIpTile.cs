@@ -1,10 +1,3 @@
-﻿using CodeDeck.PluginAbstractions;
-using System;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace CodeDeck.Plugins.Plugins.NetworkTools;
 
 public partial class NetworkTools : CodeDeckPlugin
@@ -22,7 +15,7 @@ public partial class NetworkTools : CodeDeckPlugin
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunEvery("External IP update", TimeSpan.FromMilliseconds(Interval), GetAsync);
 
             await Task.CompletedTask;
 
@@ -42,24 +35,18 @@ public partial class NetworkTools : CodeDeckPlugin
 
                 Text = string.Format(Format, FormatIp(result, ShowIpOnTwoLines, PadOctets));
             }
-            catch (Exception) { }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                Logger.LogError(exception, "External IP update failed.");
+                throw;
+            }
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                GetAsync(cancellationToken).Wait(cancellationToken);
-                await Task.Delay(Interval, cancellationToken);
             }
         }
 

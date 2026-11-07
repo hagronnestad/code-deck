@@ -1,17 +1,16 @@
-﻿using CodeDeck.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.IO;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck
 {
     public class Program
     {
         private static readonly CancellationTokenSource cts = new CancellationTokenSource();
+        private static PluginLoader? _pluginLoader;
+        private static IPluginTaskManager? _pluginTaskManager;
+        private static ILoggerFactory? _loggerFactory;
 
         public static async Task Main(string[] args)
         {
@@ -24,6 +23,8 @@ namespace CodeDeck
                     services.AddLogging();
 
                     services.AddSingleton<ConfigurationProvider>();
+                    services.AddSingleton<PluginTaskManager>();
+                    services.AddSingleton<IPluginTaskManager>(serviceProvider => serviceProvider.GetRequiredService<PluginTaskManager>());
                     services.AddSingleton<PluginLoader>();
                     services.AddSingleton<ProcessMonitor>();
                     services.AddSingleton<StreamDeckManager>();
@@ -36,12 +37,12 @@ namespace CodeDeck
 
                     logging.SetMinimumLevel(LogLevel.Debug);
                     logging.AddConsole();
-                    logging.AddDebug();
-
-                    //logging.AddEventLog();
                 })
                 .Build();
-            
+
+            _loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
+            _pluginLoader = host.Services.GetRequiredService<PluginLoader>();
+            _pluginTaskManager = host.Services.GetRequiredService<IPluginTaskManager>();
             await host.RunAsync(cts.Token);
         }
 
@@ -49,7 +50,21 @@ namespace CodeDeck
         {
             cts.Cancel();
         }
+
+        public static ILogger CreateLogger(string categoryName) =>
+            (_loggerFactory ?? throw new InvalidOperationException("The host has not been initialized."))
+                .CreateLogger(categoryName);
+
+        public static PluginRuntimeSnapshot GetPluginRuntimeSnapshot() => new(
+            _pluginLoader?.GetPluginStatuses() ?? Array.Empty<PluginStatusSnapshot>(),
+            _pluginTaskManager?.GetTasks() ?? Array.Empty<PluginTaskSnapshot>());
     }
+
+    public sealed record PluginStatusSnapshot(string Name, bool IsLoaded, long ArtifactSizeBytes);
+
+    public sealed record PluginRuntimeSnapshot(
+        IReadOnlyList<PluginStatusSnapshot> Plugins,
+        IReadOnlyList<PluginTaskSnapshot> Tasks);
 
     public sealed class Worker : BackgroundService
     {
@@ -66,16 +81,15 @@ namespace CodeDeck
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _pluginLoader.LoadAllPlugins();
             await _streamDeckManager.Start();
 
             await Task.Delay(-1, stoppingToken);
         }
 
-        public override Task StopAsync(CancellationToken cancellationToken)
+        public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            _streamDeckManager.ClearKeys();
-            return base.StopAsync(cancellationToken);
+            await _streamDeckManager.StopAsync();
+            await base.StopAsync(cancellationToken);
         }
     }
 }

@@ -1,7 +1,4 @@
-﻿using CodeDeck.PluginAbstractions;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.Counter;
 

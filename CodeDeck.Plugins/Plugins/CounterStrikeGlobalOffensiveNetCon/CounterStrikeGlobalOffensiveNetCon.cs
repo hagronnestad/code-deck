@@ -1,10 +1,5 @@
-﻿using CodeDeck.PluginAbstractions;
-using System;
-using System.IO;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 public class CounterStrikeGlobalOffensiveNetCon : CodeDeckPlugin
 {
@@ -40,9 +35,14 @@ public class CounterStrikeGlobalOffensiveNetCon : CodeDeckPlugin
                 await tw.WriteLineAsync(new StringBuilder(Command), cancellationToken);
                 c.Close();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception e)
             {
-                Console.WriteLine($"Exception: {e.Message}");
+                Logger.LogError(e, "Could not send the NetCon command.");
+                throw;
             }
             finally
             {

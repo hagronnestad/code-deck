@@ -1,138 +1,128 @@
-﻿using CodeDeck.PluginAbstractions;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using System;
-using System.Diagnostics;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.WebRequest
 {
     public class WebRequest : CodeDeckPlugin
     {
-        private static readonly HttpClient _client = new();
-
-        public class PlainTextTile : Tile
+        public abstract class WebRequestTile : Tile
         {
+            private readonly SemaphoreSlim _updateLock = new(1, 1);
+            private bool _deinitialized;
+
             [Setting] public string? Url { get; set; }
-            [Setting] public string? Format { get; set; }
-            [Setting] public int? Interval { get; set; }
+            protected abstract int IntervalMilliseconds { get; }
+            protected abstract string UpdateName { get; }
+            protected abstract Task FetchAsync(HttpClient client, Uri url, CancellationToken cancellationToken);
 
-            public override async Task Init(CancellationToken cancellationToken)
+            public override Task Init(CancellationToken cancellationToken)
             {
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
-
-                await Task.CompletedTask;
+                RunEvery(UpdateName, TimeSpan.FromMilliseconds(IntervalMilliseconds), GetAsync);
+                return Task.CompletedTask;
             }
 
-            public override async Task OnTilePressUp(CancellationToken cancellationToken)
+            public override Task OnTilePressUp(CancellationToken cancellationToken) => GetAsync(cancellationToken);
+
+            public override async Task DeInit()
             {
-                await GetAsync(cancellationToken);
+                await _updateLock.WaitAsync();
+                try
+                {
+                    _deinitialized = true;
+                }
+                finally
+                {
+                    _updateLock.Release();
+                }
             }
 
             private async Task GetAsync(CancellationToken cancellationToken)
             {
+                await _updateLock.WaitAsync(cancellationToken);
                 try
                 {
+                    ObjectDisposedException.ThrowIf(_deinitialized, this);
                     ShowIndicator = true;
-                    Text = string.Format(Format ?? "{0}", await _client.GetStringAsync(Url, cancellationToken));
+                    if (!Uri.TryCreate(Url, UriKind.Absolute, out var url) ||
+                        url.Scheme is not ("http" or "https"))
+                    {
+                        throw new InvalidOperationException("WebRequest requires an absolute HTTP or HTTPS URL.");
+                    }
+
+                    var client = PluginContext.GetOrCreateSharedState("WebRequest.HttpClient", () => new HttpClient());
+                    await FetchAsync(client, url, cancellationToken);
+                    Logger.LogDebug("Web request update completed for {Host}.", url.Host);
                 }
-                catch (Exception) { }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    Logger.LogError(exception, "Web request update failed.");
+                    throw;
+                }
                 finally
                 {
                     ShowIndicator = false;
-                }
-            }
-
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        Debug.WriteLine($"{nameof(BackgroundTask)} in {nameof(PlainTextTile)} with {Url} was cancelled!");
-                        return;
-                    }
-
-                    GetAsync(cancellationToken).Wait(cancellationToken);
-                    await Task.Delay(Interval ?? 60000, cancellationToken);
+                    _updateLock.Release();
                 }
             }
         }
 
-        public class ImageTile : Tile
+        public class PlainTextTile : WebRequestTile
         {
-            [Setting] public string? Url { get; set; }
+            [Setting] public string? Format { get; set; }
+            [Setting] public int? Interval { get; set; }
+
+            protected override int IntervalMilliseconds => Interval ?? 60000;
+            protected override string UpdateName => "Plain text update";
+
+            protected override async Task FetchAsync(HttpClient client, Uri url, CancellationToken cancellationToken)
+            {
+                var text = await client.GetStringAsync(url, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                Text = string.Format(Format ?? "{0}", text);
+            }
+        }
+
+        public class ImageTile : WebRequestTile
+        {
             [Setting] public int Interval { get; set; } = 60000;
             [Setting] public int Size { get; set; } = 72;
             [Setting] public bool Crop { get; set; } = false;
 
-            public override async Task Init(CancellationToken cancellationToken)
-            {
-                _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            protected override int IntervalMilliseconds => Interval;
+            protected override string UpdateName => "Image update";
 
-                await Task.CompletedTask;
-            }
-
-            public override async Task OnTilePressUp(CancellationToken cancellationToken)
+            protected override async Task FetchAsync(HttpClient client, Uri url, CancellationToken cancellationToken)
             {
-                await GetAsync(cancellationToken);
-            }
-
-            private async Task GetAsync(CancellationToken cancellationToken)
-            {
+                if (Size <= 0) throw new InvalidOperationException("WebRequest image Size must be positive.");
+                var data = await client.GetByteArrayAsync(url, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                var image = SixLabors.ImageSharp.Image.Load<Rgba32>(data);
                 try
                 {
-                    ShowIndicator = true;
-                    var data = await _client.GetByteArrayAsync(Url, cancellationToken);
-                    var image = SixLabors.ImageSharp.Image.Load(data);
-
-                    if (image != null)
+                    if (Crop)
                     {
-                        if (Crop)
-                        {
-                            var cropSize = Math.Min(image.Width, image.Height);
-
-                            image.Mutate(i => i.Crop(new Rectangle(
-                                image.Width / 2 - cropSize / 2,
-                                image.Height / 2 - cropSize / 2,
-                                cropSize,
-                                cropSize
-                            )));
-                        }
-
-                        image.Mutate(i => i.Resize(new ResizeOptions()
-                        {
-                            Mode = ResizeMode.Max,
-                            Size = new Size(Size, Size)
-                        }));
-
-                        var i = new Image<Rgba32>(Size, Size);
-                        i.Mutate(x => x.DrawImage(image, new Point((Size / 2) - image.Width / 2, (Size / 2) - image.Height / 2), 1f));
-
-                        Image = i;
+                        var cropSize = Math.Min(image.Width, image.Height);
+                        image.Mutate(x => x.Crop(new Rectangle(
+                            (image.Width - cropSize) / 2, (image.Height - cropSize) / 2, cropSize, cropSize)));
                     }
-                }
-                catch (Exception) { }
-                finally
-                {
-                    ShowIndicator = false;
-                }
-            }
-
-            private async Task BackgroundTask(CancellationToken cancellationToken)
-            {
-                for (; ; )
-                {
-                    if (cancellationToken.IsCancellationRequested)
+                    image.Mutate(x => x.Resize(new ResizeOptions
                     {
-                        return;
-                    }
-
-                    GetAsync(cancellationToken).Wait(cancellationToken);
-                    await Task.Delay(Interval, cancellationToken);
+                        Mode = ResizeMode.Pad,
+                        Size = new Size(Size, Size),
+                        PadColor = Color.Transparent
+                    }));
+                    cancellationToken.ThrowIfCancellationRequested();
+                    SetOwnedImage(image);
+                }
+                catch
+                {
+                    if (!ReferenceEquals(Image, image)) image.Dispose();
+                    throw;
                 }
             }
         }

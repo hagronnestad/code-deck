@@ -1,9 +1,5 @@
-﻿using CodeDeck.PluginAbstractions;
 using SixLabors.ImageSharp;
-using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.Clock;
 
@@ -20,9 +16,7 @@ public partial class Clock : CodeDeckPlugin
         private DateTime? _timePressDown = null;
 
         private CancellationTokenSource? _ctsCheckLongPress;
-        private CancellationTokenSource? _ctsFrameworkAndCheckLongPressCombined;
         private CancellationTokenSource? _ctsUpdateTile;
-        private CancellationTokenSource? _ctsFrameworkAndUpdateTileCombined;
 
 
         public override async Task Init(CancellationToken cancellationToken)
@@ -38,57 +32,48 @@ public partial class Clock : CodeDeckPlugin
             Text = ts.ToString(Format);
         }
 
-        private async Task UpdateTile(CancellationToken cancellationToken)
+        private Task UpdateTile(CancellationToken cancellationToken)
         {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                SetText(_sw.Elapsed);
-                await Task.Delay(Interval, cancellationToken);
-            }
+            SetText(_sw.Elapsed);
+            return Task.CompletedTask;
         }
 
         private async Task CheckLongPress(CancellationToken cancellationToken)
         {
-            for (; ; )
+            if (_timePressDown is not null && ((DateTime.Now - _timePressDown).Value.TotalMilliseconds >= HoldToResetTime))
             {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                if (_timePressDown is not null && ((DateTime.Now - _timePressDown).Value.TotalMilliseconds >= HoldToResetTime))
-                {
-                    await OnLongPress(cancellationToken);
-                    return;
-                }
-
-                await Task.Delay(100, cancellationToken);
+                await OnLongPress(cancellationToken);
+                _ctsCheckLongPress?.Cancel();
             }
         }
 
         public override async Task OnTilePressDown(CancellationToken cancellationToken)
         {
             _timePressDown = DateTime.Now;
+            _ctsCheckLongPress?.Cancel();
             _ctsCheckLongPress = new CancellationTokenSource();
-            _ctsFrameworkAndCheckLongPressCombined = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _ctsCheckLongPress.Token);
-            _ = CheckLongPress(_ctsFrameworkAndCheckLongPressCombined.Token);
+            RunEvery(
+                "Long press check",
+                TimeSpan.FromMilliseconds(100),
+                CheckLongPress,
+                runImmediately: false,
+                cancellationToken: _ctsCheckLongPress.Token);
 
             if (_sw.IsRunning)
             {
-                _ctsFrameworkAndUpdateTileCombined?.Cancel();
+                _ctsUpdateTile?.Cancel();
                 _sw.Stop();
                 ShowIndicator = false;
             }
             else
             {
+                _ctsUpdateTile?.Cancel();
                 _ctsUpdateTile = new CancellationTokenSource();
-                _ctsFrameworkAndUpdateTileCombined = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _ctsUpdateTile.Token);
-                _ = UpdateTile(_ctsFrameworkAndUpdateTileCombined.Token);
+                RunEvery(
+                    "Stopwatch update",
+                    TimeSpan.FromMilliseconds(Interval),
+                    UpdateTile,
+                    cancellationToken: _ctsUpdateTile.Token);
                 _sw.Start();
                 ShowIndicator = true;
             }
@@ -102,6 +87,13 @@ public partial class Clock : CodeDeckPlugin
         {
             _ctsCheckLongPress?.Cancel();
             return base.OnTilePressUp(cancellationToken);
+        }
+
+        public override Task DeInit()
+        {
+            _ctsCheckLongPress?.Cancel();
+            _ctsUpdateTile?.Cancel();
+            return Task.CompletedTask;
         }
 
         private async Task OnLongPress(CancellationToken cancellationToken)

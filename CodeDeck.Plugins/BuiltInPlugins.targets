@@ -1,0 +1,19 @@
+<Project>
+  <ItemGroup>
+    <BuiltInPluginProject Include="$(MSBuildThisFileDirectory)Plugins\**\*.csproj" />
+  </ItemGroup>
+
+  <Target Name="StageBuiltInPlugins" AfterTargets="Build">
+    <MSBuild
+      Projects="@(BuiltInPluginProject)"
+      Targets="Restore"
+      Properties="Configuration=$(Configuration)"
+      BuildInParallel="true" />
+
+    <MSBuild
+      Projects="@(BuiltInPluginProject)"
+      Targets="Build"
+      Properties="Configuration=$(Configuration);PluginStagingDirectory=$(TargetDir)Plugins"
+      BuildInParallel="true" />
+  </Target>
+</Project>

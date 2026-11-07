@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp;
 
 namespace CodeDeck.PluginAbstractions
 {
@@ -17,97 +18,189 @@ namespace CodeDeck.PluginAbstractions
         public string? Text
         {
             get { return _text; }
-            set
-            {
-                _text = value;
-                NotifyChange?.Invoke();
-            }
+            set { Set(ref _text, value); }
         }
 
         private Color? _textColor;
         public Color? TextColor
         {
-            get => _textColor; set
-            {
-                _textColor = value;
-                NotifyChange?.Invoke();
-            }
+            get => _textColor;
+            set { Set(ref _textColor, value); }
         }
 
         private Color? _bgColor;
         public Color? BackgroundColor
         {
-            get => _bgColor; set
-            {
-                _bgColor = value;
-                NotifyChange?.Invoke();
-            }
+            get => _bgColor;
+            set { Set(ref _bgColor, value); }
         }
 
         private string? _font;
         public string? Font
         {
-            get => _font; set
-            {
-                _font = value;
-                NotifyChange?.Invoke();
-            }
+            get => _font;
+            set { Set(ref _font, value); }
         }
 
         private float? _fontSize;
         public float? FontSize
         {
-            get => _fontSize; set
-            {
-                _fontSize = value;
-                NotifyChange?.Invoke();
-            }
+            get => _fontSize;
+            set { Set(ref _fontSize, value); }
         }
 
         private Image? _image;
+        private Image? _ownedImage;
+        private bool _isDeinitialized;
+        public object RenderLock { get; private set; } = new();
         public Image? Image
         {
-            get => _image; set
+            get => _image;
+            set { Set(ref _image, value); }
+        }
+
+        protected void SetOwnedImage(Image? image)
+        {
+            lock (RenderLock)
             {
-                _image = value;
-                NotifyChange?.Invoke();
+                if (_isDeinitialized)
+                {
+                    image?.Dispose();
+                    throw new ObjectDisposedException(GetType().Name);
+                }
+
+                var previous = _ownedImage;
+                _ownedImage = image;
+                try
+                {
+                    Image = image;
+                }
+                finally
+                {
+                    if (!ReferenceEquals(previous, image)) previous?.Dispose();
+                }
             }
         }
 
         private int? _imagePadding;
         public int? ImagePadding
         {
-            get => _imagePadding; set
-            {
-                _imagePadding = value;
-                NotifyChange?.Invoke();
-            }
+            get => _imagePadding;
+            set { Set(ref _imagePadding, value); }
         }
 
         private bool? _showIndicator;
         public bool? ShowIndicator
         {
-            get => _showIndicator; set
-            {
-                _showIndicator = value;
-                NotifyChange?.Invoke();
-            }
+            get => _showIndicator;
+            set { Set(ref _showIndicator, value); }
         }
 
         private Color? _indicatorColor;
         public Color? IndicatorColor
         {
-            get => _indicatorColor; set
-            {
-                _indicatorColor = value;
-                NotifyChange?.Invoke();
-            }
+            get => _indicatorColor;
+            set { Set(ref _indicatorColor, value); }
+        }
+
+        /// <summary>
+        /// Assigns a tile property and only notifies the framework when the value
+        /// actually changed. Redrawing a key is expensive (bitmap composition plus a
+        /// USB transfer), so tiles that poll frequently but rarely change - a clock
+        /// showing "HH:mm", a battery level, a weather icon - cost almost nothing.
+        /// </summary>
+        private void Set<T>(ref T field, T value)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value)) return;
+
+            field = value;
+            NotifyChange?.Invoke();
         }
 
         public Dictionary<string, string>? Settings { get; set; }
+        public PluginContext PluginContext { get; private set; } = null!;
+        private ILogger? _logger;
+        protected ILogger Logger => _logger
+            ?? throw new InvalidOperationException("The tile has not been initialized.");
+        private CancellationToken _cancellationToken;
+        private CancellationTokenSource? _lifetimeCancellation;
+        private readonly string _taskOwner;
 
 
-        public Tile() { }
+        public Tile()
+        {
+            _taskOwner = $"{GetType().Name} ({Guid.NewGuid():N})";
+        }
+
+        public async Task InitializeAsync(
+            PluginContext pluginContext, CancellationToken cancellationToken, object? renderLock = null)
+        {
+            RenderLock = renderLock ?? RenderLock;
+            PluginContext = pluginContext;
+            _logger = pluginContext.CreateLogger(GetType().FullName ?? GetType().Name);
+            _lifetimeCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                pluginContext.CancellationToken, cancellationToken);
+            _cancellationToken = _lifetimeCancellation.Token;
+            await Init(_cancellationToken);
+        }
+
+        public async Task DeinitializeAsync()
+        {
+            try
+            {
+                _lifetimeCancellation?.Cancel();
+                if (PluginContext is not null)
+                {
+                    await PluginContext.TaskManager.StopOwnerAsync(PluginContext.TaskScopeId, _taskOwner);
+                }
+                await DeInit();
+            }
+            finally
+            {
+                lock (RenderLock)
+                {
+                    _isDeinitialized = true;
+                    if (ReferenceEquals(_image, _ownedImage)) _image = null;
+                    _ownedImage?.Dispose();
+                    _ownedImage = null;
+                }
+                _lifetimeCancellation?.Dispose();
+            }
+        }
+
+        protected void RunEvery(
+            string name,
+            TimeSpan interval,
+            Func<CancellationToken, Task> operation,
+            bool runImmediately = true,
+            CancellationToken cancellationToken = default)
+        {
+            PluginContext.TaskManager.RunRecurring(
+                PluginContext.TaskScopeId,
+                GetType().DeclaringType?.Name ?? GetType().Name,
+                _taskOwner,
+                name,
+                interval,
+                operation,
+                runImmediately,
+                _cancellationToken,
+                cancellationToken);
+        }
+
+        protected void RunTask(
+            string name,
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default)
+        {
+            PluginContext.TaskManager.Run(
+                PluginContext.TaskScopeId,
+                GetType().DeclaringType?.Name ?? GetType().Name,
+                _taskOwner,
+                name,
+                operation,
+                _cancellationToken,
+                cancellationToken);
+        }
 
         public virtual async Task Init(CancellationToken cancellationToken)
         {

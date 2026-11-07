@@ -1,10 +1,4 @@
-﻿using CodeDeck.PluginAbstractions;
-using HidSharp;
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using HidSharp;
 
 /// <summary>
 /// HID report bytes found here:
@@ -19,18 +13,24 @@ public class HyperXCloudAlphaWireless : CodeDeckPlugin
         [Setting] public int? Interval { get; set; }
 
         private HidDevice? _device;
+        private readonly SemaphoreSlim _updateLock = new(1, 1);
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _device = DeviceList.Local
-                .GetHidDevices(0x03F0, 0x098D)
-                .Where(x => x.GetMaxInputReportLength() == 31)
-                .FirstOrDefault();
+            _device = FindDevice();
 
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunEvery(
+                "Battery poll",
+                TimeSpan.FromMilliseconds(Interval ?? 10 * 60 * 1000),
+                GetAsync,
+                cancellationToken: cancellationToken);
 
             await Task.CompletedTask;
         }
+
+        protected virtual HidDevice? FindDevice() => DeviceList.Local
+            .GetHidDevices(0x03F0, 0x098D)
+            .FirstOrDefault(x => x.GetMaxInputReportLength() == 31);
 
         public override async Task OnTilePressUp(CancellationToken cancellationToken)
         {
@@ -39,13 +39,15 @@ public class HyperXCloudAlphaWireless : CodeDeckPlugin
 
         private async Task GetAsync(CancellationToken cancellationToken)
         {
+            await _updateLock.WaitAsync(cancellationToken);
             try
             {
                 ShowIndicator = true;
 
                 if (_device == null) return;
 
-                HidStream s = _device.Open();
+                using var s = _device.Open();
+                using var registration = cancellationToken.Register(s.Dispose);
 
                 byte[] report = new byte[20];
                 report[0] = 0x21;
@@ -59,28 +61,20 @@ public class HyperXCloudAlphaWireless : CodeDeckPlugin
 
                 Text = string.Format(Format ?? "🔋\n{0}%", batteryLevel);
             }
-            catch
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+            catch (Exception exception)
             {
                 Text = FormatDisconnected ?? "🎧\n❌";
+                Logger.LogWarning(exception, "HyperX Cloud Alpha battery update failed.");
+                throw;
             }
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    Debug.WriteLine($"{nameof(BackgroundTask)} in {nameof(BatteryTile)} was cancelled!");
-                    return;
-                }
-
-                GetAsync(cancellationToken).Wait(cancellationToken);
-                await Task.Delay(Interval ?? 10 * 60 * 1000, cancellationToken);
+                _updateLock.Release();
             }
         }
     }

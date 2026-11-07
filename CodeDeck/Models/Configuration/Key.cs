@@ -1,6 +1,3 @@
-﻿using SixLabors.ImageSharp;
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace CodeDeck.Models.Configuration

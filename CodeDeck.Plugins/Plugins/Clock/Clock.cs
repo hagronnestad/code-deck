@@ -1,8 +1,3 @@
-﻿using CodeDeck.PluginAbstractions;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace CodeDeck.Plugins.Plugins.Clock;
 
 public partial class Clock : CodeDeckPlugin
@@ -14,23 +9,14 @@ public partial class Clock : CodeDeckPlugin
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _ = Task.Run(() => UpdateTile(cancellationToken), cancellationToken);
-
+            RunEvery("Clock update", TimeSpan.FromMilliseconds(Interval ?? 1000), UpdateTile);
             await Task.CompletedTask;
         }
 
-        private async Task UpdateTile(CancellationToken cancellationToken)
+        private Task UpdateTile(CancellationToken cancellationToken)
         {
-            for (; ; )
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                Text = DateTime.Now.ToString(Format ?? "HH\\:mm");
-                await Task.Delay(Interval ?? 1000, cancellationToken);
-            }
+            Text = DateTime.Now.ToString(Format ?? "HH\\:mm");
+            return Task.CompletedTask;
         }
 
         public override async Task OnTilePressDown(CancellationToken cancellationToken)

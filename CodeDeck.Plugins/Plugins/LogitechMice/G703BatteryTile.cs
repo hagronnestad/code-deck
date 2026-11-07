@@ -1,11 +1,5 @@
-﻿using CodeDeck.PluginAbstractions;
 using CodeDeck.Plugins.Plugins.LogitechMice.Hid;
 using HidSharp;
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.LogitechMice;
 
@@ -18,7 +12,7 @@ public partial class LogitechMice : CodeDeckPlugin
         [Setting] public int? Interval { get; set; }
         [Setting] public byte DeviceIndex { get; set; } = 0x01;
 
-        private HidDevice? _device;
+        private readonly SemaphoreSlim _updateLock = new(1, 1);
         private byte? _batteryFeatureIndex = null;
         private double? _voltage = null;
         private int? _percentage = null;
@@ -26,14 +20,11 @@ public partial class LogitechMice : CodeDeckPlugin
 
         public override async Task Init(CancellationToken cancellationToken)
         {
-            _device = FindDevice();
-
-            _ = Task.Run(() => ReadTask(cancellationToken), cancellationToken);
-            _ = Task.Run(() => BackgroundTask(cancellationToken), cancellationToken);
+            RunTask("HID report reader", ReadTask);
+            RunEvery("Battery poll", TimeSpan.FromMilliseconds(Interval ?? 10 * 60 * 1000), GetBatteryInformation);
 
             Text = FormatDisconnected ?? "🖱\n❌";
-
-            await GetBatteryInformation(cancellationToken);
+            await Task.CompletedTask;
         }
 
         public override async Task OnTilePressUp(CancellationToken cancellationToken)
@@ -41,7 +32,7 @@ public partial class LogitechMice : CodeDeckPlugin
             await GetBatteryInformation(cancellationToken);
         }
 
-        private static HidDevice? FindDevice()
+        protected virtual HidDevice? FindDevice()
         {
             return DeviceList.Local
                 .GetHidDevices(0x046D, 0xC539)
@@ -51,30 +42,28 @@ public partial class LogitechMice : CodeDeckPlugin
 
         private async Task ReadTask(CancellationToken cancellationToken)
         {
-            HidStream? hidStream = null;
             var buffer = new byte[512];
 
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    _device = FindDevice();
-                    if (_device == null)
+                    var device = FindDevice();
+                    if (device == null)
                     {
                         await Task.Delay(1000, cancellationToken);
                         continue;
                     }
 
-                    hidStream = _device.Open();
-                    if (hidStream == null)
-                    {
-                        await Task.Delay(1000, cancellationToken);
-                        continue;
-                    }
-
+                    using var hidStream = device.Open();
+                    using var registration = cancellationToken.Register(hidStream.Dispose);
                     var readBytes = await Task.Factory.FromAsync(hidStream.BeginRead, hidStream.EndRead, buffer, 0, buffer.Length, TaskCreationOptions.None);
                     var data = buffer[0..readBytes];
                     HandleHidPpReport(data);
+                }
+                catch (Exception) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
                 }
                 catch (TimeoutException)
                 {
@@ -85,7 +74,8 @@ public partial class LogitechMice : CodeDeckPlugin
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine($"{nameof(RequestBatteryInformationFeatureIndex)}: Exception: '{e.Message}'");
+                    Logger.LogWarning(e, "G703 HID reader failed.");
+                    await Task.Delay(1000, cancellationToken);
                 }
             }
         }
@@ -118,69 +108,50 @@ public partial class LogitechMice : CodeDeckPlugin
             }
         }
 
-        private async Task RequestBatteryInformationFeatureIndex(CancellationToken cancellationToken)
+        private async Task RequestBatteryInformationFeatureIndex(HidDevice device, CancellationToken cancellationToken)
         {
-            try
-            {
-                ShowIndicator = true;
-
-                _device = FindDevice();
-                if (_device == null) throw new NullReferenceException(nameof(_device));
-
-                using var s = _device.Open();
-
-                var packet = HidPp.CreateGetFeatureIndexPacket(DeviceIndex, HidPp.HIDPP_FEATURE_BATTERY_VOLTAGE);
-                byte[] report = new byte[_device.GetMaxInputReportLength()];
-                Array.Copy(packet, report, packet.Length);
-                await s.WriteAsync(report, 0, report.Length, cancellationToken);
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine($"{nameof(RequestBatteryInformationFeatureIndex)}: Exception: '{e.Message}'");
-            }
-            finally
-            {
-                ShowIndicator = false;
-            }
+            using var s = device.Open();
+            using var registration = cancellationToken.Register(s.Dispose);
+            var packet = HidPp.CreateGetFeatureIndexPacket(DeviceIndex, HidPp.HIDPP_FEATURE_BATTERY_VOLTAGE);
+            byte[] report = new byte[device.GetMaxInputReportLength()];
+            Array.Copy(packet, report, packet.Length);
+            await s.WriteAsync(report, 0, report.Length, cancellationToken);
         }
 
         private async Task GetBatteryInformation(CancellationToken cancellationToken)
         {
+            await _updateLock.WaitAsync(cancellationToken);
             try
             {
                 ShowIndicator = true;
 
-                _device = FindDevice();
-                if (_device == null) throw new NullReferenceException(nameof(_device));
-
-                using var s = _device.Open();
-
-                await RequestBatteryInformationFeatureIndex(cancellationToken);
+                var device = FindDevice()
+                    ?? throw new InvalidOperationException("G703 receiver was not found.");
+                await RequestBatteryInformationFeatureIndex(device, cancellationToken);
                 await Task.Delay(250, cancellationToken);
                 if (_batteryFeatureIndex == null) throw new Exception($"'{nameof(_batteryFeatureIndex)}' is still 'null'");
 
                 var packet = HidPp.CreateGetBatteryInformationPacket(DeviceIndex, _batteryFeatureIndex.Value);
-                byte[] report = new byte[_device.GetMaxInputReportLength()];
+                using var s = device.Open();
+                using var registration = cancellationToken.Register(s.Dispose);
+                byte[] report = new byte[device.GetMaxInputReportLength()];
                 Array.Copy(packet, report, packet.Length);
                 await s.WriteAsync(report, 0, report.Length, cancellationToken);
             }
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
             catch (Exception e)
             {
-                Debug.WriteLine($"{nameof(GetBatteryInformation)}: Exception: '{e.Message}'");
+                Logger.LogWarning(e, "G703 battery update failed.");
                 Text = FormatDisconnected ?? "🖱\n❌";
+                throw;
             }
             finally
             {
                 ShowIndicator = false;
-            }
-        }
-
-        private async Task BackgroundTask(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                await GetBatteryInformation(cancellationToken);
-                await Task.Delay(Interval ?? 10 * 60 * 1000, cancellationToken);
+                _updateLock.Release();
             }
         }
 

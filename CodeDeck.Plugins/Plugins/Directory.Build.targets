@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup Condition="'$(PluginStagingDirectory)' == '' and '$(DesignTimeBuild)' != 'true'">
+    <PluginStagingDirectory>$(MSBuildThisFileDirectory)..\..\CodeDeck.Windows\bin\$(Configuration)\net10.0-windows7.0\Plugins</PluginStagingDirectory>
+  </PropertyGroup>
+
+  <Target Name="StagePlugin" AfterTargets="Build" Condition="'$(PluginStagingDirectory)' != ''">
+    <ItemGroup>
+      <PluginOutput Include="$(TargetDir)**\*" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(PluginOutput)"
+      DestinationFiles="$(PluginStagingDirectory)\$(AssemblyName)\%(PluginOutput.RecursiveDir)%(PluginOutput.Filename)%(PluginOutput.Extension)"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>

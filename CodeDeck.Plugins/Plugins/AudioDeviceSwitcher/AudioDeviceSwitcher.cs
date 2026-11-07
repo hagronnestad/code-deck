@@ -1,14 +1,7 @@
-﻿using AudioSwitcher.AudioApi;
+using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
-using AudioSwitcher.AudioApi.Session;
-using CodeDeck.PluginAbstractions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Media;
 using System.Runtime.Versioning;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CodeDeck.Plugins.Plugins.AudioDeviceSwitcher
 {

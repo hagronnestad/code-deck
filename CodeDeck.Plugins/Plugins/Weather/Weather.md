@@ -19,6 +19,17 @@ This tile uses the [yr.no](https://developer.yr.no/) weather API to show an imag
 ## Usage
 The tile can be configured to show an image that describes the weather in the next 1, 6 or 12 hours.
 
+Updates run immediately and then at the configured interval. Key presses also
+update the image, without overlapping that tile's periodic request. A failed
+request, unavailable forecast period, or missing icon is reported through
+`ILogger` and recurring-task diagnostics instead of silently leaving a blank tile.
+The last successful image is retained and the next scheduled update retries.
+
+The plugin identifies itself to MET Norway using a User-Agent with the Code Deck
+repository URL. Tiles share one HTTP client per plugin load, without changing
+headers during requests. Icons are loaded from the plugin's own `Icons` directory;
+deploy all of that directory along with the assembly.
+
 
 ### Settings
 
@@ -45,8 +56,8 @@ The tile can be configured to show an image that describes the weather in the ne
   "ImageOffsetX": 0,
   "ImageOffsetY": -8,
   "Settings": {
-    "Lat": "59,1484",
-    "Lon": "5,2611",
+    "Lat": "59.1484",
+    "Lon": "5.2611",
     "Period": "Next1Hours"
   }
 }
@@ -59,6 +70,11 @@ The time between requesting an update from the Weather API. The interval must be
 
 #### Lat / Lon
 The location to fetch weather data for.
+
+Use dot-decimal coordinates regardless of the computer's locale. Legacy
+comma-decimal settings remain accepted. Latitude must be between -90 and 90,
+longitude between -180 and 180, and both must be finite. API coordinates are
+formatted with at most four decimal places, as required by MET Norway.
 
 
 #### Period

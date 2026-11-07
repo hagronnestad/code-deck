@@ -1,7 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace CodeDeck.Plugins.Plugins.LogitechMice.Hid;
 
 public class HidPp
@@ -47,7 +43,7 @@ public class HidPp
 
     public static byte[] CreateGetUnifiedBatteryPacket(byte deviceIndex, byte featureIndex)
     {
-        byte funcAndId = (byte) ((1 << 4) | SOFTWARE_ID); // FuncIndex=1
+        byte funcAndId = (byte)((1 << 4) | SOFTWARE_ID); // FuncIndex=1
         return new byte[] { MESSAGE_TYPE_LONG, deviceIndex, featureIndex, funcAndId };
     }
 

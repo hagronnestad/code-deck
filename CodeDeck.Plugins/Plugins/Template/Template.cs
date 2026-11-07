@@ -1,10 +1,4 @@
-﻿using CodeDeck.PluginAbstractions;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-
-/// <summary>
+﻿/// <summary>
 /// A wrapper class for the Plugin, this class MUST extend the CodeDeckPlugin class
 /// This class can be used as a container for static fields that are shared between Tile classes
 /// This class is never instantiated, but you may use a static constructor to initialize static fields:

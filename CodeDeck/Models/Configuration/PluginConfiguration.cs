@@ -1,5 +1,3 @@
-﻿using System.Collections.Generic;
-
 namespace CodeDeck.Models.Configuration
 {
     public class PluginConfiguration

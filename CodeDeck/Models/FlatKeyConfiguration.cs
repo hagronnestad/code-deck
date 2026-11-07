@@ -1,5 +1,3 @@
-﻿using CodeDeck.Models.Configuration;
-
 namespace CodeDeck.Models
 {
     public class FlatKeyConfiguration
